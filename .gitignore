@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.*
+*.local
+*.log
+.husky/_
+public/favicon.svg
+public/icons.svg
+src/assets/
+public/icons/windows/
+public/icons/ios/
