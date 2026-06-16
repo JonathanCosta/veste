@@ -422,7 +422,12 @@ async function handleDelete() {
         <div class="flex items-center justify-between px-4 py-3 bg-black shrink-0">
           <button class="text-white/80 text-sm" @click="cancelCrop">Cancelar</button>
           <span class="text-white text-sm font-medium">Ajustar foto</span>
-          <button class="text-accent text-sm font-semibold" @click="confirmCrop">Confirmar</button>
+          <button
+            class="text-white text-sm font-semibold active:scale-95 transition-transform duration-200"
+            @click="confirmCrop"
+          >
+            Confirmar
+          </button>
         </div>
 
         <!-- Cropper container -->
