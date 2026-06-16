@@ -168,8 +168,14 @@ function getItemUrl(index) {
 </script>
 
 <template>
-  <div class="px-4 pt-6 pb-4">
-    <header class="mb-5">
+  <div class="px-4 pb-4">
+    <!-- Brand header -->
+    <div class="flex items-center gap-2 pt-4 pb-2">
+      <img src="/logo.png" alt="Veste Logo" class="h-8 w-8 object-contain" />
+      <span class="text-sm font-bold tracking-widest uppercase text-accent">Veste</span>
+    </div>
+
+    <header class="mt-2 mb-5">
       <h1 class="text-2xl font-bold tracking-tight">Looks</h1>
       <p class="text-sm text-text-muted mt-0.5">{{ looks.length }} looks</p>
     </header>
