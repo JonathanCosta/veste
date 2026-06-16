@@ -3,7 +3,7 @@ import prettier from 'eslint-config-prettier'
 
 export default [
   {
-    ignores: ['node_modules', 'dist', 'public'],
+    ignores: ['node_modules', 'dist', 'public', 'e2e'],
   },
   ...pluginVue.configs['flat/recommended'],
   prettier,
