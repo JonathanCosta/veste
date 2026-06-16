@@ -68,7 +68,12 @@ async function handleImport(event) {
         </label>
       </div>
 
-      <div class="rounded-2xl bg-white shadow-soft p-5">
+      <div class="rounded-2xl bg-white shadow-soft p-5 text-center">
+        <img
+          src="/logo.png"
+          alt="Veste Logo"
+          class="h-20 mx-auto object-contain mb-4 filter drop-shadow-sm"
+        />
         <h2 class="text-sm font-medium uppercase tracking-wider text-text-muted mb-2">Sobre</h2>
         <p class="text-xs text-text-muted leading-relaxed">
           Veste — Look do Dia v0.1.0<br />
