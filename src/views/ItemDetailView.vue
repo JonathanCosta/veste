@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onUnmounted, computed, watch } from 'vue'
+import { ref, nextTick, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import Cropper from 'cropperjs'
 import {
   getItem,
   deleteItem,
@@ -27,10 +28,17 @@ const imageFile = ref(null)
 const formType = ref('top')
 const formDescription = ref('')
 
+// Crop state
+const showCrop = ref(false)
+const cropImageUrl = ref('')
+const cropContainerRef = ref(null)
+let cropperInstance = null
+
 async function loadItem(id) {
   loading.value = true
   item.value = null
   looks.value = []
+  destroyCropper()
   if (imageUrl.value) {
     URL.revokeObjectURL(imageUrl.value)
     imageUrl.value = null
@@ -74,20 +82,98 @@ watch(
 )
 
 onUnmounted(() => {
+  destroyCropper()
   if (imageUrl.value) {
     URL.revokeObjectURL(imageUrl.value)
   }
 })
 
+// ─── Crop helpers ───
+
+function destroyCropper() {
+  if (cropperInstance) {
+    cropperInstance.destroy()
+    cropperInstance = null
+  }
+  if (cropImageUrl.value) {
+    URL.revokeObjectURL(cropImageUrl.value)
+    cropImageUrl.value = ''
+  }
+}
+
 function onFileSelected(event) {
   const file = event.target.files?.[0]
   if (!file) return
-  imageFile.value = file
+
+  // Revoke previous preview
   if (imageUrl.value) {
     URL.revokeObjectURL(imageUrl.value)
+    imageUrl.value = null
   }
-  imageUrl.value = URL.createObjectURL(file)
+  imageFile.value = null
+
+  // Read file as data URL for Cropper.js
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    cropImageUrl.value = e.target.result
+    showCrop.value = true
+    // Init Cropper after DOM renders
+    nextTick(() => {
+      const container = cropContainerRef.value
+      if (!container) return
+      const img = container.querySelector('img')
+      if (!img) return
+      const startCropper = () => {
+        destroyCropper()
+        cropperInstance = new Cropper(img, {
+          aspectRatio: 3 / 4,
+          viewMode: 2,
+          background: false,
+          autoCropArea: 0.85,
+          responsive: true,
+        })
+      }
+      if (img.complete) {
+        startCropper()
+      } else {
+        img.onload = startCropper
+      }
+    })
+  }
+  reader.readAsDataURL(file)
 }
+
+function confirmCrop() {
+  if (!cropperInstance) return
+
+  const canvas = cropperInstance.getCroppedCanvas({
+    maxWidth: 1080,
+    maxHeight: 1080,
+  })
+
+  canvas.toBlob(
+    (blob) => {
+      if (!blob) return
+      // Store cropped blob as the image file (already WebP)
+      imageFile.value = blob
+      // Show preview
+      if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
+      imageUrl.value = URL.createObjectURL(blob)
+      // Close crop overlay
+      showCrop.value = false
+      destroyCropper()
+    },
+    'image/webp',
+    0.85,
+  )
+}
+
+function cancelCrop() {
+  showCrop.value = false
+  destroyCropper()
+}
+
+// ─── Save / Delete ───
 
 async function handleSave() {
   if (!formDescription.value.trim()) {
@@ -101,7 +187,12 @@ async function handleSave() {
       description: formDescription.value.trim(),
     }
     if (imageFile.value) {
-      const blob = await compressImage(imageFile.value)
+      // If already a WebP blob (from crop), use directly.
+      // Otherwise compress the original file.
+      const blob =
+        imageFile.value.type === 'image/webp'
+          ? imageFile.value
+          : await compressImage(imageFile.value)
       newItem.imageBlob = blob
     }
     const id = await addItem(newItem)
@@ -289,6 +380,23 @@ async function handleDelete() {
     <p class="text-text-muted">Peça não encontrada</p>
     <button class="mt-4 text-sm text-accent underline" @click="router.push('/')">Voltar</button>
   </div>
+
+  <!-- Crop overlay -->
+  <Transition name="crop">
+    <div v-if="showCrop" class="fixed inset-0 z-50 flex flex-col bg-black">
+      <!-- Top bar -->
+      <div class="flex items-center justify-between px-4 py-3 bg-black shrink-0">
+        <button class="text-white/80 text-sm" @click="cancelCrop">Cancelar</button>
+        <span class="text-white text-sm font-medium">Ajustar foto</span>
+        <button class="text-accent text-sm font-semibold" @click="confirmCrop">Confirmar</button>
+      </div>
+
+      <!-- Cropper container -->
+      <div ref="cropContainerRef" class="flex-1 flex items-center justify-center overflow-hidden">
+        <img v-if="cropImageUrl" :src="cropImageUrl" class="max-w-full max-h-full" />
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -298,5 +406,35 @@ async function handleDelete() {
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Crop overlay transition */
+.crop-enter-active,
+.crop-leave-active {
+  transition: opacity 0.2s ease;
+}
+.crop-enter-from,
+.crop-leave-to {
+  opacity: 0;
+}
+</style>
+
+<style>
+/* Override Cropper.js styles for dark background */
+.cropper-view-box {
+  outline: 1px solid theme('colors.accent');
+  outline-color: rgba(45, 45, 45, 0.75);
+}
+.cropper-line {
+  background-color: theme('colors.accent');
+}
+.cropper-point {
+  background-color: theme('colors.accent');
+  width: 10px;
+  height: 10px;
+}
+.cropper-point.point-se {
+  width: 12px;
+  height: 12px;
 }
 </style>
