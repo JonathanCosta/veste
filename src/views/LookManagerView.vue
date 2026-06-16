@@ -234,7 +234,11 @@ function getItemUrl(index) {
           <div
             class="relative w-full bg-white rounded-t-3xl shadow-soft-lg p-6 pb-10 max-h-[70vh] overflow-y-auto"
           >
-            <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+            <!-- Minimalist drawer handle -->
+            <div class="flex flex-col items-center mb-5">
+              <div class="w-14 h-1.5 bg-accent/10 rounded-full shadow-inner" />
+              <div class="w-10 h-px bg-accent/5 mt-0.5 rounded-full" />
+            </div>
 
             <h2 class="text-lg font-bold mb-1">{{ selectedLook?.description || 'Look' }}</h2>
             <p class="text-sm text-text-muted mb-4">
@@ -316,7 +320,11 @@ function getItemUrl(index) {
           <div
             class="relative w-full bg-white rounded-t-3xl shadow-soft-lg p-6 pb-10 max-h-[80vh] overflow-y-auto"
           >
-            <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+            <!-- Minimalist drawer handle -->
+            <div class="flex flex-col items-center mb-5">
+              <div class="w-14 h-1.5 bg-accent/10 rounded-full shadow-inner" />
+              <div class="w-10 h-px bg-accent/5 mt-0.5 rounded-full" />
+            </div>
 
             <h2 class="text-lg font-bold mb-1">Novo Look</h2>
             <p class="text-sm text-text-muted mb-4">Selecione pelo menos 2 peças</p>
@@ -337,7 +345,11 @@ function getItemUrl(index) {
                 v-for="(item, index) in allItems"
                 :key="item.id"
                 class="rounded-xl overflow-hidden bg-gray-50 ring-2 transition-all duration-200 cursor-pointer active:scale-95"
-                :class="selectedItemIds.includes(item.id) ? 'ring-accent' : 'ring-transparent'"
+                :class="
+                  selectedItemIds.includes(item.id)
+                    ? 'ring-accent scale-[0.98] opacity-60'
+                    : 'ring-transparent'
+                "
                 @click="toggleItemSelection(item.id)"
               >
                 <div class="aspect-[3/4] bg-gray-100">

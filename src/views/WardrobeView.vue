@@ -85,28 +85,35 @@ onMounted(loadItems)
     </div>
 
     <template v-if="loading">
-      <div class="grid grid-cols-2 gap-3">
-        <div v-for="n in 4" :key="n" class="rounded-2xl bg-white/50 animate-pulse">
-          <div class="aspect-[3/4] bg-gray-100 rounded-t-2xl" />
-          <div class="p-2.5 space-y-2">
-            <div class="h-3 bg-gray-100 rounded w-3/4" />
-            <div class="h-2 bg-gray-100 rounded w-1/2" />
+      <div class="bg-white/50 rounded-3xl p-4 shadow-inner">
+        <div class="grid grid-cols-2 gap-3">
+          <div v-for="n in 4" :key="n" class="rounded-2xl bg-white/50 animate-pulse">
+            <div class="aspect-[3/4] bg-gray-100 rounded-t-2xl" />
+            <div class="p-2.5 space-y-2">
+              <div class="h-3 bg-gray-100 rounded w-3/4" />
+              <div class="h-2 bg-gray-100 rounded w-1/2" />
+            </div>
           </div>
         </div>
       </div>
     </template>
 
     <template v-else-if="filteredItems.length === 0">
-      <div class="text-center py-16">
-        <p class="text-text-muted text-sm">Nenhuma peça encontrada</p>
+      <div class="bg-white/50 rounded-3xl p-4 shadow-inner">
+        <div class="text-center py-16">
+          <p class="text-text-muted text-sm">Nenhuma peça encontrada</p>
+        </div>
       </div>
     </template>
 
-    <TransitionGroup v-else name="list" tag="div" class="grid grid-cols-2 gap-3">
-      <div v-for="item in filteredItems" :key="item.id" @click="router.push(`/item/${item.id}`)">
-        <ItemCard :item="item" />
-      </div>
-    </TransitionGroup>
+    <!-- Drawer container — simulates an open drawer with recessed depth -->
+    <div v-else class="bg-white/50 rounded-3xl p-4 shadow-inner">
+      <TransitionGroup name="list" tag="div" class="grid grid-cols-2 gap-3">
+        <div v-for="item in filteredItems" :key="item.id" @click="router.push(`/item/${item.id}`)">
+          <ItemCard :item="item" />
+        </div>
+      </TransitionGroup>
+    </div>
   </div>
 </template>
 
