@@ -1,6 +1,7 @@
 <script setup>
 import { RouterView } from 'vue-router'
 import BottomNav from './components/BottomNav.vue'
+import CustomDialog from './components/CustomDialog.vue'
 </script>
 
 <template>
@@ -11,6 +12,7 @@ import BottomNav from './components/BottomNav.vue'
       </Transition>
     </RouterView>
     <BottomNav />
+    <CustomDialog />
   </div>
 </template>
 
