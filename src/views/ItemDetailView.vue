@@ -6,6 +6,7 @@ import {
   getItem,
   deleteItem,
   addItem,
+  updateItem,
   getLooksByItem,
   ITEM_TYPES,
 } from '../services/wardrobeService'
@@ -27,6 +28,28 @@ const imageFile = ref(null)
 // Form fields
 const formType = ref('top')
 const formDescription = ref('')
+
+// Edit mode
+const isEditing = ref(false)
+
+function enterEditMode() {
+  if (!item.value) return
+  formType.value = item.value.type || 'top'
+  formDescription.value = item.value.description || ''
+  isEditing.value = true
+}
+
+function cancelEdit() {
+  isEditing.value = false
+  // Revoke any newly cropped image and restore original
+  if (imageFile.value) {
+    URL.revokeObjectURL(imageUrl.value)
+    imageUrl.value = item.value?.imageBlob ? URL.createObjectURL(item.value.imageBlob) : null
+    imageFile.value = null
+  }
+  formType.value = item.value?.type || 'top'
+  formDescription.value = item.value?.description || ''
+}
 
 // Crop state
 const showCrop = ref(false)
@@ -209,21 +232,27 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    const newItem = {
+    const data = {
       type: formType.value,
       description: formDescription.value.trim(),
     }
     if (imageFile.value) {
-      // If already a WebP blob (from crop), use directly.
-      // Otherwise compress the original file.
       const blob =
         imageFile.value.type === 'image/webp'
           ? imageFile.value
           : await compressImage(imageFile.value)
-      newItem.imageBlob = blob
+      data.imageBlob = blob
     }
-    const id = await addItem(newItem)
-    router.push(`/item/${id}`)
+
+    if (isEditing.value && item.value?.id) {
+      await updateItem(item.value.id, data)
+      isEditing.value = false
+      // Reload item to reflect changes
+      await loadItem(item.value.id)
+    } else {
+      const id = await addItem(data)
+      router.push(`/item/${id}`)
+    }
   } catch (e) {
     alert('Erro ao salvar: ' + e.message)
   } finally {
@@ -344,8 +373,8 @@ async function handleDelete() {
       </div>
     </div>
 
-    <!-- View/Edit mode -->
-    <div v-else-if="item" class="pb-6">
+    <!-- View mode -->
+    <div v-else-if="item && !isEditing" class="pb-6">
       <div class="relative h-[50vh] bg-gray-100 overflow-hidden">
         <img
           v-if="imageUrl"
@@ -378,7 +407,7 @@ async function handleDelete() {
         <div class="flex gap-3 mt-6">
           <button
             class="flex-1 py-2.5 bg-accent text-white text-sm font-medium rounded-2xl active:scale-[0.97] transition-transform duration-200"
-            @click="router.push(`/?edit=${item.id}`)"
+            @click="enterEditMode"
           >
             Editar
           </button>
@@ -406,6 +435,114 @@ async function handleDelete() {
             </div>
           </div>
         </section>
+      </div>
+    </div>
+
+    <!-- Edit mode -->
+    <div v-else-if="item && isEditing" class="px-4 pt-6 pb-24">
+      <div class="flex items-center justify-between mb-6">
+        <button
+          class="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform duration-200"
+          @click="cancelEdit"
+        >
+          <svg class="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
+        <h1 class="text-lg font-bold">Editar Peça</h1>
+        <div class="w-9" />
+      </div>
+
+      <div
+        class="aspect-[3/4] max-h-[40vh] rounded-2xl bg-white/70 shadow-soft overflow-hidden mb-5 flex items-center justify-center cursor-pointer active:scale-[0.97] transition-transform duration-200"
+        @click="fileInput?.click()"
+      >
+        <img v-if="imageUrl" :src="imageUrl" class="w-full h-full object-cover" />
+        <div v-else class="text-center text-text-muted">
+          <svg class="w-8 h-8 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+          <span class="text-sm">Trocar foto</span>
+        </div>
+        <input
+          ref="fileInput"
+          type="file"
+          accept="image/*"
+          class="hidden"
+          @change="onFileSelected"
+        />
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wider text-text-muted block mb-1.5"
+            >Tipo</label
+          >
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="t in ITEM_TYPES"
+              :key="t"
+              class="px-3.5 py-1.5 text-xs font-medium rounded-full capitalize transition-all duration-200 active:scale-90"
+              :class="
+                formType === t
+                  ? 'bg-accent text-white'
+                  : 'bg-white/70 text-text-muted ring-1 ring-gray-200/50'
+              "
+              @click="formType = t"
+            >
+              {{
+                t === 'top'
+                  ? 'Parte de Cima'
+                  : t === 'bottom'
+                    ? 'Parte de Baixo'
+                    : t === 'full'
+                      ? 'Inteiro'
+                      : t === 'shoes'
+                        ? 'Calçados'
+                        : 'Acessórios'
+              }}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wider text-text-muted block mb-1.5"
+            >Descrição</label
+          >
+          <input
+            v-model="formDescription"
+            type="text"
+            placeholder="Ex: Camiseta branca básica"
+            class="w-full bg-white/70 rounded-2xl px-4 py-2.5 text-sm text-text-main placeholder:text-text-muted outline-none ring-1 ring-gray-200/50 focus:ring-accent/20 transition-shadow"
+          />
+        </div>
+
+        <div class="flex gap-3">
+          <button
+            class="flex-1 py-3 bg-accent text-white text-sm font-medium rounded-2xl active:scale-[0.97] transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="saving"
+            @click="handleSave"
+          >
+            {{ saving ? 'Salvando...' : 'Salvar alterações' }}
+          </button>
+          <button
+            class="flex-1 py-3 bg-white text-text-muted text-sm font-medium rounded-2xl ring-1 ring-gray-200 active:scale-[0.97] transition-transform duration-200"
+            :disabled="saving"
+            @click="cancelEdit"
+          >
+            Cancelar
+          </button>
+        </div>
       </div>
     </div>
 

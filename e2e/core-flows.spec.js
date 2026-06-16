@@ -138,6 +138,59 @@ test.describe('🔀 Navigation', () => {
   })
 })
 
+test.describe('✏️ Edit item', () => {
+  test.beforeEach(async ({ page }) => {
+    await clearIndexedDB(page)
+  })
+
+  test('should edit item description and type', async ({ page }) => {
+    // Create an item first
+    await createItem(page, 'Camiseta branca', 'top')
+
+    // Click Editar
+    await page.getByText('Editar', { exact: true }).click()
+    await expect(page.locator('h1')).toContainText('Editar Peça')
+
+    // Change description
+    const descInput = page.locator('input[placeholder="Ex: Camiseta branca básica"]')
+    await descInput.fill('Camiseta preta básica')
+
+    // Change type to "Parte de Baixo" (bottom)
+    await page.getByText('Parte de Baixo', { exact: true }).click()
+
+    // Save
+    await page.getByText('Salvar alterações').click()
+
+    // Wait for save to complete and view to reload
+    await page.waitForTimeout(1000)
+
+    // Verify the changes are reflected
+    await expect(page.getByText('Camiseta preta básica')).toBeVisible()
+    await expect(page.getByText('bottom')).toBeVisible()
+  })
+
+  test('should cancel edit and revert changes', async ({ page }) => {
+    await createItem(page, 'Vestido azul', 'full')
+
+    // Enter edit mode
+    await page.getByText('Editar', { exact: true }).click()
+    await expect(page.locator('h1')).toContainText('Editar Peça')
+
+    // Change fields
+    const descInput = page.locator('input[placeholder="Ex: Camiseta branca básica"]')
+    await descInput.fill('Vestido vermelho')
+    await page.getByText('Calçados', { exact: true }).click()
+
+    // Cancel
+    await page.getByText('Cancelar', { exact: true }).click()
+
+    // Verify original values are restored
+    await expect(page.getByText('Vestido azul')).toBeVisible()
+    await expect(page.getByText('full')).toBeVisible()
+    await expect(page.getByText('Vestido vermelho')).not.toBeVisible()
+  })
+})
+
 test.describe('👕 Wardrobe', () => {
   test.beforeEach(async ({ page }) => {
     await clearIndexedDB(page)
