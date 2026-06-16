@@ -2,6 +2,7 @@
 import { ref, nextTick, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Cropper from 'cropperjs'
+import { useDialog } from '../composables/useDialog'
 import {
   getItem,
   deleteItem,
@@ -14,6 +15,7 @@ import { compressImage } from '../services/imageService'
 
 const route = useRoute()
 const router = useRouter()
+const dialog = useDialog()
 
 const fileInput = ref(null)
 const isNew = computed(() => route.params.id === 'new')
@@ -213,7 +215,7 @@ async function confirmCrop() {
     resetFileInput()
   } catch (e) {
     console.error('Crop failed:', e)
-    alert('Erro ao recortar imagem: ' + e.message)
+    dialog.alert('Erro ao recortar imagem: ' + e.message)
   }
 }
 
@@ -227,7 +229,7 @@ function cancelCrop() {
 
 async function handleSave() {
   if (!formDescription.value.trim()) {
-    alert('Adicione uma descrição para a peça')
+    await dialog.alert('Adicione uma descrição para a peça')
     return
   }
   saving.value = true
@@ -254,14 +256,15 @@ async function handleSave() {
       router.push(`/item/${id}`)
     }
   } catch (e) {
-    alert('Erro ao salvar: ' + e.message)
+    await dialog.alert('Erro ao salvar: ' + e.message)
   } finally {
     saving.value = false
   }
 }
 
 async function handleDelete() {
-  if (!confirm('Remover esta peça?')) return
+  const ok = await dialog.confirm('Tem certeza que deseja remover esta peça?', 'Remover peça')
+  if (!ok) return
   await deleteItem(item.value.id)
   router.push('/')
 }

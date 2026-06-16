@@ -4,8 +4,10 @@ import { useRouter } from 'vue-router'
 import { useLooks } from '../composables/useLooks'
 import { getItems, getItemsByIds, addLook, updateLook } from '../services/wardrobeService'
 import { compressImage } from '../services/imageService'
+import { useDialog } from '../composables/useDialog'
 
 const router = useRouter()
+const dialog = useDialog()
 
 const { looks, loading, loadLooks, deleteLook } = useLooks()
 
@@ -107,7 +109,7 @@ async function handleLookPhotoSelected(event) {
     loadLooks()
   } catch (e) {
     console.error('Failed to save look photo:', e)
-    alert('Erro ao salvar foto: ' + e.message)
+    await dialog.alert('Erro ao salvar foto: ' + e.message)
   } finally {
     savingPhoto.value = false
     if (lookFileInput.value) {
@@ -137,7 +139,7 @@ function closeCreateSheet() {
 
 async function handleCreateLook() {
   if (selectedItemIds.value.length < 2) {
-    alert('Selecione pelo menos 2 peças para criar um look')
+    await dialog.alert('Selecione pelo menos 2 peças para criar um look')
     return
   }
   saving.value = true
@@ -149,14 +151,15 @@ async function handleCreateLook() {
     closeCreateSheet()
     loadLooks()
   } catch (e) {
-    alert('Erro ao criar look: ' + e.message)
+    await dialog.alert('Erro ao criar look: ' + e.message)
   } finally {
     saving.value = false
   }
 }
 
 async function handleDelete(look) {
-  if (!confirm('Remover este look?')) return
+  const ok = await dialog.confirm('Tem certeza que deseja remover este look?', 'Remover look')
+  if (!ok) return
   await deleteLook(look.id)
   if (selectedLook.value?.id === look.id) closeSheet()
   loadLooks()

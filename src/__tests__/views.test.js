@@ -10,12 +10,23 @@ vi.mock('file-saver', () => ({
   default: { saveAs: mockSaveAs },
 }))
 
-// Mock alert/confirm
-vi.stubGlobal('alert', vi.fn())
-vi.stubGlobal(
-  'confirm',
-  vi.fn(() => true),
-)
+// Mock useDialog — confirm() returns true by default so deletions proceed.
+// Individual tests can override confirmMock for the "cancelled" case.
+const { confirmMock, alertMock } = vi.hoisted(() => ({
+  confirmMock: vi.fn(() => Promise.resolve(true)),
+  alertMock: vi.fn(() => Promise.resolve()),
+}))
+vi.mock('../composables/useDialog', () => ({
+  useDialog: () => ({
+    visible: { value: false },
+    title: { value: '' },
+    message: { value: '' },
+    type: { value: 'alert' },
+    confirm: confirmMock,
+    alert: alertMock,
+    resolveDialog: vi.fn(),
+  }),
+}))
 
 /**
  * Create a router for testing views.
@@ -202,10 +213,7 @@ describe('ItemDetailView.vue', () => {
   })
 
   it('does not delete when confirm is cancelled', async () => {
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => false),
-    )
+    confirmMock.mockImplementation(() => Promise.resolve(false))
 
     const View = (await import('../views/ItemDetailView.vue')).default
     const { wrapper, router } = await mountView(View, `/item/${itemId}`)
@@ -221,16 +229,14 @@ describe('ItemDetailView.vue', () => {
 
     expect(pushSpy).not.toHaveBeenCalled()
 
+    confirmMock.mockImplementation(() => Promise.resolve(true))
+
     // Item should still exist
     const item = await db.items.get(itemId)
     expect(item).toBeDefined()
     expect(item.description).toBe('Tênis branco')
 
     pushSpy.mockRestore()
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => true),
-    )
   })
 })
 

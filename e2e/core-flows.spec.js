@@ -223,8 +223,9 @@ test.describe('👕 Wardrobe', () => {
   test('should delete an item and return to empty state', async ({ page }) => {
     await createItem(page, 'Item para deletar', 'accessory')
 
-    page.once('dialog', (dialog) => dialog.accept())
     await page.getByText('Remover', { exact: true }).click()
+    await expect(page.getByText('Confirmar', { exact: true })).toBeVisible({ timeout: 3000 })
+    await page.getByText('Confirmar', { exact: true }).click()
 
     await expect(page.getByText('Nenhuma peça encontrada')).toBeVisible({ timeout: 8000 })
   })
@@ -326,8 +327,9 @@ test.describe('👔 Looks', () => {
     await expect(page.getByText('2 peças').first()).toBeVisible()
 
     // Delete
-    page.once('dialog', (dialog) => dialog.accept())
     await page.getByText('Remover look', { exact: true }).click()
+    await expect(page.getByText('Confirmar', { exact: true })).toBeVisible({ timeout: 3000 })
+    await page.getByText('Confirmar', { exact: true }).click()
     await expect(page.getByText('Nenhum look ainda')).toBeVisible({ timeout: 5000 })
   })
 
@@ -439,8 +441,9 @@ test.describe('🔄 Complete user journey', () => {
 
     // 4. Delete the look
     await page.getByText('Look praia').click()
-    page.once('dialog', (dialog) => dialog.accept())
     await page.getByText('Remover look', { exact: true }).click()
+    await expect(page.getByText('Confirmar', { exact: true })).toBeVisible({ timeout: 3000 })
+    await page.getByText('Confirmar', { exact: true }).click()
     await expect(page.getByText('Nenhum look ainda')).toBeVisible({ timeout: 5000 })
 
     // 5. Go back to wardrobe, verify items still exist
