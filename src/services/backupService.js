@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
-import { saveAs } from 'file-saver'
+import FileSaver from 'file-saver'
+const { saveAs } = FileSaver
 import db from '../database/db'
 
 const MAX_ZIP_SIZE = 50 * 1024 * 1024 // 50 MB

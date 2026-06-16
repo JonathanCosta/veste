@@ -2,17 +2,35 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLooks } from '../composables/useLooks'
-import { getItemsByIds } from '../services/wardrobeService'
+import { getItems, getItemsByIds, addLook } from '../services/wardrobeService'
 
 const router = useRouter()
+
 const { looks, loading, loadLooks, deleteLook } = useLooks()
+
+// View look sheet
 const showSheet = ref(false)
 const selectedLook = ref(null)
 const lookItems = ref([])
 const itemUrls = ref([])
+
+// Create look sheet
+const showCreateSheet = ref(false)
+const createDescription = ref('')
+const allItems = ref([])
+const selectedItemIds = ref([])
+const saving = ref(false)
+const allItemUrls = ref([])
+
 let isActive = true
 
-onMounted(loadLooks)
+onMounted(async () => {
+  loadLooks()
+  allItems.value = await getItems()
+  allItemUrls.value = allItems.value.map((item) =>
+    item.imageBlob ? URL.createObjectURL(item.imageBlob) : null,
+  )
+})
 
 onUnmounted(() => {
   isActive = false
@@ -24,6 +42,13 @@ function revokeAllUrls() {
     URL.revokeObjectURL(url)
   }
   itemUrls.value = []
+}
+
+function revokeAllItemUrls() {
+  for (const url of allItemUrls.value) {
+    if (url) URL.revokeObjectURL(url)
+  }
+  allItemUrls.value = []
 }
 
 async function openLook(look) {
@@ -43,6 +68,45 @@ function closeSheet() {
   showSheet.value = false
   selectedLook.value = null
   lookItems.value = []
+}
+
+function toggleItemSelection(itemId) {
+  const idx = selectedItemIds.value.indexOf(itemId)
+  if (idx >= 0) {
+    selectedItemIds.value.splice(idx, 1)
+  } else {
+    selectedItemIds.value.push(itemId)
+  }
+}
+
+function openCreateSheet() {
+  createDescription.value = ''
+  selectedItemIds.value = []
+  showCreateSheet.value = true
+}
+
+function closeCreateSheet() {
+  showCreateSheet.value = false
+}
+
+async function handleCreateLook() {
+  if (selectedItemIds.value.length < 2) {
+    alert('Selecione pelo menos 2 peças para criar um look')
+    return
+  }
+  saving.value = true
+  try {
+    await addLook({
+      description: createDescription.value.trim(),
+      itemIds: selectedItemIds.value,
+    })
+    closeCreateSheet()
+    loadLooks()
+  } catch (e) {
+    alert('Erro ao criar look: ' + e.message)
+  } finally {
+    saving.value = false
+  }
 }
 
 async function handleDelete(look) {
@@ -66,7 +130,7 @@ function getItemUrl(index) {
 
     <button
       class="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-sm text-text-muted active:scale-[0.97] transition-transform duration-200 mb-5"
-      @click="router.push('/?newLook=true')"
+      @click="openCreateSheet"
     >
       + Criar look
     </button>
@@ -146,6 +210,61 @@ function getItemUrl(index) {
               @click="handleDelete(selectedLook)"
             >
               Remover look
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition name="sheet">
+        <div v-if="showCreateSheet" class="fixed inset-0 z-50 flex items-end">
+          <div class="absolute inset-0 bg-black/20" @click="closeCreateSheet" />
+          <div
+            class="relative w-full bg-white rounded-t-3xl shadow-soft-lg p-6 pb-10 max-h-[80vh] overflow-y-auto"
+          >
+            <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+
+            <h2 class="text-lg font-bold mb-1">Novo Look</h2>
+            <p class="text-sm text-text-muted mb-4">Selecione pelo menos 2 peças</p>
+
+            <input
+              v-model="createDescription"
+              type="text"
+              placeholder="Descrição do look (opcional)"
+              class="w-full bg-white/70 rounded-2xl px-4 py-2.5 text-sm text-text-main placeholder:text-text-muted outline-none ring-1 ring-gray-200/50 focus:ring-accent/20 transition-shadow mb-4"
+            />
+
+            <div v-if="allItems.length === 0" class="text-center py-6 text-text-muted text-sm">
+              Nenhuma peça disponível. Adicione peças primeiro.
+            </div>
+
+            <div v-else class="grid grid-cols-3 gap-2 mb-5">
+              <div
+                v-for="(item, index) in allItems"
+                :key="item.id"
+                class="rounded-xl overflow-hidden bg-gray-50 ring-2 transition-all duration-200 cursor-pointer active:scale-95"
+                :class="selectedItemIds.includes(item.id) ? 'ring-accent' : 'ring-transparent'"
+                @click="toggleItemSelection(item.id)"
+              >
+                <div class="aspect-[3/4] bg-gray-100">
+                  <img
+                    v-if="allItemUrls[index]"
+                    :src="allItemUrls[index]"
+                    :alt="item.description"
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+                <p class="text-[10px] p-1 truncate text-text-muted">{{ item.type }}</p>
+              </div>
+            </div>
+
+            <button
+              class="w-full py-2.5 bg-accent text-white text-sm font-medium rounded-2xl active:scale-[0.97] transition-transform duration-200 disabled:opacity-50"
+              :disabled="selectedItemIds.length < 2 || saving"
+              @click="handleCreateLook"
+            >
+              {{ saving ? 'Salvando...' : `Criar look (${selectedItemIds.length} peças)` }}
             </button>
           </div>
         </div>
