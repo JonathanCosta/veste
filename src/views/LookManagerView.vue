@@ -98,7 +98,7 @@ async function handleCreateLook() {
   try {
     await addLook({
       description: createDescription.value.trim(),
-      itemIds: selectedItemIds.value,
+      itemIds: [...selectedItemIds.value],
     })
     closeCreateSheet()
     loadLooks()
