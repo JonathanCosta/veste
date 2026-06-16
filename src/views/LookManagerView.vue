@@ -178,10 +178,9 @@ function getItemThumbUrl(itemId) {
 
 <template>
   <div class="px-4 pb-4">
-    <!-- Brand header -->
-    <div class="flex items-center gap-2 pt-4 pb-2">
+    <!-- Centered logo mark -->
+    <div class="flex justify-center pt-4 pb-3">
       <img src="/logo.png" alt="Veste Logo" class="h-8 w-8 object-contain" />
-      <span class="text-sm font-bold tracking-widest uppercase text-accent">Veste</span>
     </div>
 
     <header class="mt-2 mb-5">
