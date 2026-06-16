@@ -6,5 +6,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    setupFiles: ['./src/__tests__/setup.js'],
+    // Run files sequentially — all share the same IndexedDB instance
+    fileParallelism: false,
   },
 })
