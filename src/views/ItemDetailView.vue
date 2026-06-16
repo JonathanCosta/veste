@@ -143,29 +143,42 @@ function onFileSelected(event) {
   reader.readAsDataURL(file)
 }
 
-function confirmCrop() {
+async function confirmCrop() {
   if (!cropperInstance) return
+  try {
+    // Cropper.js v2: $toCanvas() on the <cropper-canvas> Web Component
+    const cropperCanvas = cropperInstance.getCropperCanvas()
+    if (!cropperCanvas) throw new Error('Cropper canvas not found')
 
-  const canvas = cropperInstance.getCroppedCanvas({
-    maxWidth: 1080,
-    maxHeight: 1080,
-  })
+    const canvasEl = await cropperCanvas.$toCanvas({
+      width: 1080,
+      height: 1080,
+    })
 
-  canvas.toBlob(
-    (blob) => {
-      if (!blob) return
-      // Store cropped blob as the image file (already WebP)
-      imageFile.value = blob
-      // Show preview
-      if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
-      imageUrl.value = URL.createObjectURL(blob)
-      // Close crop overlay
-      showCrop.value = false
-      destroyCropper()
-    },
-    'image/webp',
-    0.85,
-  )
+    const blob = await new Promise((resolve) => {
+      canvasEl.toBlob(
+        (b) => {
+          if (b) resolve(b)
+        },
+        'image/webp',
+        0.85,
+      )
+    })
+
+    if (!blob) throw new Error('Failed to generate blob')
+
+    // Store cropped blob as the image file (already WebP)
+    imageFile.value = blob
+    // Show preview
+    if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
+    imageUrl.value = URL.createObjectURL(blob)
+    // Close crop overlay
+    showCrop.value = false
+    destroyCropper()
+  } catch (e) {
+    console.error('Crop failed:', e)
+    alert('Erro ao recortar imagem: ' + e.message)
+  }
 }
 
 function cancelCrop() {
