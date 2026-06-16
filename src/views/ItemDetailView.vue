@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getItem,
@@ -27,23 +27,34 @@ const imageFile = ref(null)
 const formType = ref('top')
 const formDescription = ref('')
 
-onMounted(async () => {
-  if (isNew.value) {
+async function loadItem(id) {
+  loading.value = true
+  item.value = null
+  looks.value = []
+  if (imageUrl.value) {
+    URL.revokeObjectURL(imageUrl.value)
+    imageUrl.value = null
+  }
+  imageFile.value = null
+  formType.value = 'top'
+  formDescription.value = ''
+
+  if (id === 'new') {
     loading.value = false
     return
   }
-  const id = Number(route.params.id)
-  if (!id) {
+  const numericId = Number(id)
+  if (!numericId) {
     loading.value = false
     return
   }
   try {
-    item.value = await getItem(id)
+    item.value = await getItem(numericId)
     if (item.value?.imageBlob) {
       imageUrl.value = URL.createObjectURL(item.value.imageBlob)
     }
     if (item.value) {
-      const lookRefs = await getLooksByItem(id)
+      const lookRefs = await getLooksByItem(numericId)
       looks.value = lookRefs
     }
   } catch (e) {
@@ -52,7 +63,15 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+watch(
+  () => route.params.id,
+  (newId) => {
+    loadItem(newId)
+  },
+  { immediate: true },
+)
 
 onUnmounted(() => {
   if (imageUrl.value) {
