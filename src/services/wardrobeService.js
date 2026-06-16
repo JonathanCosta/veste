@@ -63,6 +63,10 @@ export async function updateLook(id, changes) {
   await db.looks.update(id, changes)
 }
 
+export async function saveLookPhoto(lookId, blob) {
+  await db.looks.update(lookId, { imageBlob: blob })
+}
+
 export async function deleteLook(id) {
   await db.looks.delete(id)
 }
