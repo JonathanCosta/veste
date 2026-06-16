@@ -4,6 +4,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: '/veste/',
+  server: {
+    host: true,
+    allowedHosts: true,
+  },
+  preview: {
+    host: true,
+  },
   plugins: [
     vue(),
     VitePWA({
