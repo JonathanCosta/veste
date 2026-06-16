@@ -324,6 +324,54 @@ describe('LookManagerView.vue', () => {
     looks = await db.looks.toArray()
     expect(looks).toHaveLength(0)
   })
+
+  it('enters edit mode and shows editable description input', async () => {
+    const lookId = await addLook({ description: 'Editável', itemIds: [i1, i2] })
+
+    const View = (await import('../views/LookManagerView.vue')).default
+    const { wrapper } = await mountView(View)
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Editável')
+    })
+
+    // Open detail sheet
+    const lookCard = wrapper.find('div.cursor-pointer')
+    await lookCard.trigger('click')
+
+    await vi.waitFor(() => {
+      expect(document.body.textContent).toContain('Editável')
+    })
+
+    // Click "Editar"
+    await vi.waitFor(() => {
+      const btn = Array.from(document.body.querySelectorAll('button')).find(
+        (b) => b.textContent.trim() === 'Editar',
+      )
+      expect(btn).toBeDefined()
+    })
+    const editBtn = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.textContent.trim() === 'Editar',
+    )
+    editBtn.click()
+
+    // Edit mode should show Salvar alterações and Cancelar
+    await vi.waitFor(() => {
+      expect(document.body.textContent).toContain('Salvar alterações')
+      expect(document.body.textContent).toContain('Cancelar')
+    })
+
+    // Cancel should revert to view mode
+    const cancelBtn = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.textContent.trim() === 'Cancelar',
+    )
+    cancelBtn.click()
+
+    await vi.waitFor(() => {
+      expect(document.body.textContent).not.toContain('Salvar alterações')
+      expect(document.body.textContent).toContain('Remover look')
+    })
+  })
 })
 
 // ────────────────────────────────────────────

@@ -331,6 +331,65 @@ test.describe('👔 Looks', () => {
     await expect(page.getByText('Nenhum look ainda')).toBeVisible({ timeout: 5000 })
   })
 
+  test('should edit a look: remove an item and change description', async ({ page }) => {
+    // Create 3 items
+    await createItem(page, 'Camisa jeans', 'top')
+    await navTo(page, 'Peças')
+    await createItem(page, 'Calça preta', 'bottom')
+    await navTo(page, 'Peças')
+    await createItem(page, 'Tênis branco', 'shoes')
+    await navTo(page, 'Peças')
+
+    // Create a look with all 3 items
+    await navTo(page, 'Looks')
+    await page.getByText('+ Criar look').click()
+    await expect(page.getByText('Novo Look')).toBeVisible({ timeout: 5000 })
+
+    await expect(page.getByText('top', { exact: true }).first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('bottom', { exact: true }).first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('shoes', { exact: true }).first()).toBeVisible({ timeout: 5000 })
+
+    await page.getByText('top', { exact: true }).first().click()
+    await page.getByText('bottom', { exact: true }).first().click()
+    await page.getByText('shoes', { exact: true }).first().click()
+
+    await page.fill('input[placeholder="Descrição do look (opcional)"]', 'Look completo')
+    await page
+      .locator('button')
+      .filter({ hasText: /Criar look/ })
+      .last()
+      .click()
+    await expect(page.getByText('Novo Look')).not.toBeVisible({ timeout: 5000 })
+    await page.waitForTimeout(500)
+    await expect(page.getByText('Look completo')).toBeVisible()
+
+    // Open the look and enter edit mode
+    await page.getByText('Look completo').click()
+    await expect(page.getByText('3 peças').first()).toBeVisible({ timeout: 3000 })
+
+    await page.getByText('Editar', { exact: true }).click()
+    await expect(page.getByText('Salvar alterações')).toBeVisible({ timeout: 3000 })
+
+    // Change description
+    const descInput = page.locator('input[placeholder="Descrição do look"]')
+    await descInput.fill('Look atualizado')
+
+    // Remove one item by clicking its × overlay (the first remove overlay visible)
+    const removeOverlay = page.locator('[class*="bg-black/30"]').first()
+    await removeOverlay.click()
+
+    // Count should show 2 peças now
+    await expect(page.getByText('2 peças').first()).toBeVisible({ timeout: 3000 })
+
+    // Save changes
+    await page.getByText('Salvar alterações', { exact: true }).click()
+    await page.waitForTimeout(500)
+
+    // Verify the updated description is visible (saves, sheet stays open)
+    await expect(page.getByText('Look atualizado').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('2 peças').first()).toBeVisible({ timeout: 3000 })
+  })
+
   test('should not allow creating look with fewer than 2 items', async ({ page }) => {
     await createItem(page, 'Vestido florido', 'full')
     await navTo(page, 'Peças')

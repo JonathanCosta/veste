@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLooks } from '../composables/useLooks'
 import { getItems, getItemsByIds, addLook, updateLook } from '../services/wardrobeService'
@@ -19,6 +19,23 @@ const itemUrls = ref([])
 const lookPhotoUrl = ref(null)
 const lookFileInput = ref(null)
 const savingPhoto = ref(false)
+
+// Edit look mode
+const isEditingLook = ref(false)
+const editDescription = ref('')
+const editingItemIds = ref([])
+const showAddItems = ref(false)
+
+const availableItems = computed(() => {
+  if (!editingItemIds.value.length) return allItems.value
+  return allItems.value.filter((item) => !editingItemIds.value.includes(item.id))
+})
+const availableItemUrls = computed(() => {
+  return availableItems.value.map((item) => {
+    const idx = allItems.value.findIndex((i) => i.id === item.id)
+    return idx >= 0 ? allItemUrls.value[idx] : null
+  })
+})
 
 // Create look sheet
 const showCreateSheet = ref(false)
@@ -81,6 +98,7 @@ async function openLook(look) {
 }
 
 function closeSheet() {
+  if (isEditingLook.value) cancelLookEdit()
   revokeAllUrls()
   if (lookPhotoUrl.value) {
     URL.revokeObjectURL(lookPhotoUrl.value)
@@ -125,6 +143,73 @@ function toggleItemSelection(itemId) {
   } else {
     selectedItemIds.value.push(itemId)
   }
+}
+
+// ─── Edit look ──────────────────────────────────────────────────
+
+function enterLookEditMode() {
+  if (!selectedLook.value) return
+  editDescription.value = selectedLook.value.description || ''
+  editingItemIds.value = [...(selectedLook.value.itemIds || [])]
+  showAddItems.value = false
+  isEditingLook.value = true
+}
+
+function cancelLookEdit() {
+  isEditingLook.value = false
+  editDescription.value = ''
+  editingItemIds.value = []
+  showAddItems.value = false
+}
+
+async function removeLookItem(itemId) {
+  if (editingItemIds.value.length <= 2) {
+    await dialog.alert('Um look precisa ter pelo menos 2 peças')
+    return
+  }
+  const idx = editingItemIds.value.indexOf(itemId)
+  if (idx >= 0) {
+    editingItemIds.value.splice(idx, 1)
+  }
+}
+
+function toggleAddItem(itemId) {
+  const idx = editingItemIds.value.indexOf(itemId)
+  if (idx >= 0) {
+    editingItemIds.value.splice(idx, 1)
+  } else {
+    editingItemIds.value.push(itemId)
+  }
+}
+
+async function saveLookChanges() {
+  if (editingItemIds.value.length < 2) {
+    await dialog.alert('Selecione pelo menos 2 peças')
+    return
+  }
+  const id = selectedLook.value?.id
+  if (!id) return
+  await updateLook(id, {
+    description: editDescription.value.trim(),
+    itemIds: [...editingItemIds.value],
+  })
+  // Refresh detail sheet with updated data
+  selectedLook.value = {
+    ...selectedLook.value,
+    description: editDescription.value.trim(),
+    itemIds: [...editingItemIds.value],
+  }
+  lookItems.value = await getItemsByIds(editingItemIds.value)
+  // Revoke old URLs and create new ones
+  for (const url of itemUrls.value) {
+    URL.revokeObjectURL(url)
+  }
+  itemUrls.value = lookItems.value.map((item) =>
+    item.imageBlob ? URL.createObjectURL(item.imageBlob) : null,
+  )
+  isEditingLook.value = false
+  showAddItems.value = false
+  loadLooks()
 }
 
 function openCreateSheet() {
@@ -273,55 +358,81 @@ function getItemThumbUrl(itemId) {
               </div>
             </div>
 
-            <h2 class="text-lg font-bold mb-1">{{ selectedLook?.description || 'Look' }}</h2>
+            <div class="flex items-center justify-between mb-1">
+              <h2 v-if="!isEditingLook" class="text-lg font-bold">
+                {{ selectedLook?.description || 'Look' }}
+              </h2>
+              <input
+                v-else
+                v-model="editDescription"
+                type="text"
+                placeholder="Descrição do look"
+                class="flex-1 bg-white/70 rounded-xl px-3 py-2 text-sm text-text-main placeholder:text-text-muted outline-none ring-1 ring-gray-200/50 focus:ring-accent/20 transition-shadow"
+              />
+              <button
+                v-if="!isEditingLook"
+                class="shrink-0 ml-2 text-xs font-medium text-accent underline underline-offset-2 active:scale-95 transition-transform"
+                @click="enterLookEditMode"
+              >
+                Editar
+              </button>
+            </div>
             <p class="text-sm text-text-muted mb-4">
-              {{ selectedLook?.itemIds?.length || 0 }} peças
+              {{ isEditingLook ? editingItemIds.length : selectedLook?.itemIds?.length || 0 }} peças
             </p>
 
             <!-- Look photo -->
-            <div v-if="lookPhotoUrl" class="mb-4">
+            <div class="mb-4">
               <img
+                v-if="lookPhotoUrl"
                 :src="lookPhotoUrl"
                 alt="Foto do look"
                 class="w-full aspect-[3/4] object-cover rounded-2xl shadow-soft"
               />
+              <button
+                class="w-full flex items-center justify-center gap-2 text-sm text-text-muted border-2 border-dashed border-gray-200 rounded-2xl active:scale-[0.97] transition-transform duration-200"
+                :class="lookPhotoUrl ? 'mt-2 py-2 border-gray-200/50' : 'py-3'"
+                :disabled="savingPhoto"
+                @click="lookFileInput?.click()"
+              >
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                {{
+                  savingPhoto
+                    ? 'Salvando...'
+                    : lookPhotoUrl
+                      ? 'Alterar foto'
+                      : 'Adicionar foto vestindo este look'
+                }}
+              </button>
+              <input
+                ref="lookFileInput"
+                type="file"
+                accept="image/*"
+                class="hidden"
+                @change="handleLookPhotoSelected"
+              />
             </div>
-            <button
-              v-else
-              class="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-sm text-text-muted active:scale-[0.97] transition-transform duration-200 mb-4 flex items-center justify-center gap-2"
-              :disabled="savingPhoto"
-              @click="lookFileInput?.click()"
-            >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.5"
-                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.5"
-                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-              {{ savingPhoto ? 'Salvando...' : 'Adicionar foto vestindo este look' }}
-            </button>
-            <input
-              ref="lookFileInput"
-              type="file"
-              accept="image/*"
-              class="hidden"
-              @change="handleLookPhotoSelected"
-            />
 
-            <div class="flex gap-3 flex-wrap mb-6">
+            <div class="flex gap-3 flex-wrap mb-4">
               <div
                 v-for="(item, index) in lookItems"
                 :key="item.id"
-                class="w-20 rounded-xl overflow-hidden bg-gray-50"
-                @click="router.push(`/item/${item.id}`)"
+                class="w-20 rounded-xl overflow-hidden bg-gray-50 relative"
+                :class="isEditingLook ? '' : 'cursor-pointer'"
+                @click="isEditingLook ? null : router.push(`/item/${item.id}`)"
               >
                 <div class="aspect-[3/4] bg-gray-100">
                   <img
@@ -332,10 +443,89 @@ function getItemThumbUrl(itemId) {
                   />
                 </div>
                 <p class="text-[10px] p-1 truncate text-text-muted">{{ item.type }}</p>
+                <!-- Remove overlay in edit mode -->
+                <div
+                  v-if="isEditingLook"
+                  class="absolute inset-0 bg-black/30 flex items-center justify-center rounded-xl active:scale-95 transition-transform cursor-pointer"
+                  @click.stop="removeLookItem(item.id)"
+                >
+                  <svg
+                    class="w-6 h-6 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </div>
               </div>
             </div>
 
+            <!-- Add items section (edit mode only) -->
+            <div v-if="isEditingLook" class="mb-4">
+              <button
+                class="w-full py-2 text-xs font-medium text-accent underline underline-offset-2 active:scale-95 transition-transform mb-3"
+                @click="showAddItems = !showAddItems"
+              >
+                {{ showAddItems ? 'Recolher' : '+ Adicionar peças' }}
+              </button>
+              <div v-if="showAddItems">
+                <p class="text-xs text-text-muted mb-2">Peças disponíveis</p>
+                <div
+                  v-if="availableItems.length === 0"
+                  class="text-center py-4 text-text-muted text-xs"
+                >
+                  Todas as peças já estão neste look
+                </div>
+                <div v-else class="grid grid-cols-3 gap-2">
+                  <div
+                    v-for="(item, index) in availableItems"
+                    :key="item.id"
+                    class="rounded-lg overflow-hidden bg-gray-50 ring-2 transition-all duration-200 cursor-pointer active:scale-95"
+                    :class="
+                      editingItemIds.includes(item.id)
+                        ? 'ring-accent scale-[0.98] opacity-60'
+                        : 'ring-transparent'
+                    "
+                    @click="toggleAddItem(item.id)"
+                  >
+                    <div class="aspect-[3/4] bg-gray-100">
+                      <img
+                        v-if="availableItemUrls[index]"
+                        :src="availableItemUrls[index]"
+                        :alt="item.description"
+                        class="w-full h-full object-cover"
+                      />
+                    </div>
+                    <p class="text-[10px] p-1 truncate text-text-muted">{{ item.type }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div v-if="isEditingLook" class="flex gap-2">
+              <button
+                class="flex-1 py-2.5 bg-white text-text-muted text-sm font-medium rounded-2xl ring-1 ring-gray-200 active:scale-[0.97] transition-transform duration-200"
+                @click="cancelLookEdit"
+              >
+                Cancelar
+              </button>
+              <button
+                class="flex-1 py-2.5 bg-accent text-white text-sm font-medium rounded-2xl active:scale-[0.97] transition-transform duration-200 disabled:opacity-50"
+                :disabled="editingItemIds.length < 2"
+                @click="saveLookChanges"
+              >
+                Salvar alterações
+              </button>
+            </div>
             <button
+              v-else
               class="w-full py-2.5 bg-accent text-white text-sm font-medium rounded-2xl active:scale-[0.97] transition-transform duration-200"
               @click="handleDelete(selectedLook)"
             >
