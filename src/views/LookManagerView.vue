@@ -2,7 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLooks } from '../composables/useLooks'
-import { getItems, getItemsByIds, addLook } from '../services/wardrobeService'
+import { getItems, getItemsByIds, addLook, updateLook } from '../services/wardrobeService'
+import { compressImage } from '../services/imageService'
 
 const router = useRouter()
 
@@ -13,6 +14,9 @@ const showSheet = ref(false)
 const selectedLook = ref(null)
 const lookItems = ref([])
 const itemUrls = ref([])
+const lookPhotoUrl = ref(null)
+const lookFileInput = ref(null)
+const savingPhoto = ref(false)
 
 // Create look sheet
 const showCreateSheet = ref(false)
@@ -35,6 +39,10 @@ onMounted(async () => {
 onUnmounted(() => {
   isActive = false
   revokeAllUrls()
+  if (lookPhotoUrl.value) {
+    URL.revokeObjectURL(lookPhotoUrl.value)
+    lookPhotoUrl.value = null
+  }
 })
 
 function revokeAllUrls() {
@@ -53,6 +61,10 @@ function revokeAllItemUrls() {
 
 async function openLook(look) {
   revokeAllUrls()
+  if (lookPhotoUrl.value) {
+    URL.revokeObjectURL(lookPhotoUrl.value)
+    lookPhotoUrl.value = null
+  }
   selectedLook.value = look
   const items = await getItemsByIds(look.itemIds || [])
   if (!isActive) return
@@ -60,14 +72,48 @@ async function openLook(look) {
   itemUrls.value = items.map((item) =>
     item.imageBlob ? URL.createObjectURL(item.imageBlob) : null,
   )
+  if (look.imageBlob) {
+    lookPhotoUrl.value = URL.createObjectURL(look.imageBlob)
+  }
   showSheet.value = true
 }
 
 function closeSheet() {
   revokeAllUrls()
+  if (lookPhotoUrl.value) {
+    URL.revokeObjectURL(lookPhotoUrl.value)
+    lookPhotoUrl.value = null
+  }
   showSheet.value = false
   selectedLook.value = null
   lookItems.value = []
+}
+
+async function handleLookPhotoSelected(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  savingPhoto.value = true
+  try {
+    const blob = await compressImage(file)
+    if (!selectedLook.value?.id) return
+    await updateLook(selectedLook.value.id, { imageBlob: blob })
+    // Update reactive state
+    if (lookPhotoUrl.value) {
+      URL.revokeObjectURL(lookPhotoUrl.value)
+    }
+    lookPhotoUrl.value = URL.createObjectURL(blob)
+    selectedLook.value = { ...selectedLook.value, imageBlob: blob }
+    loadLooks()
+  } catch (e) {
+    console.error('Failed to save look photo:', e)
+    alert('Erro ao salvar foto: ' + e.message)
+  } finally {
+    savingPhoto.value = false
+    if (lookFileInput.value) {
+      lookFileInput.value.value = ''
+    }
+  }
 }
 
 function toggleItemSelection(itemId) {
@@ -185,6 +231,44 @@ function getItemUrl(index) {
             <p class="text-sm text-text-muted mb-4">
               {{ selectedLook?.itemIds?.length || 0 }} peças
             </p>
+
+            <!-- Look photo -->
+            <div v-if="lookPhotoUrl" class="mb-4">
+              <img
+                :src="lookPhotoUrl"
+                alt="Foto do look"
+                class="w-full aspect-[3/4] object-cover rounded-2xl shadow-soft"
+              />
+            </div>
+            <button
+              v-else
+              class="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-sm text-text-muted active:scale-[0.97] transition-transform duration-200 mb-4 flex items-center justify-center gap-2"
+              :disabled="savingPhoto"
+              @click="lookFileInput?.click()"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+              {{ savingPhoto ? 'Salvando...' : 'Adicionar foto vestindo este look' }}
+            </button>
+            <input
+              ref="lookFileInput"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="handleLookPhotoSelected"
+            />
 
             <div class="flex gap-3 flex-wrap mb-6">
               <div
