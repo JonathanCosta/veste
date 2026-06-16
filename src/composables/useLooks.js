@@ -15,8 +15,14 @@ export function useLooks() {
 
   async function loadLooks() {
     loading.value = true
-    looks.value = await getLooks()
-    loading.value = false
+    try {
+      looks.value = await getLooks()
+    } catch (e) {
+      console.error('Failed to load looks:', e)
+      looks.value = []
+    } finally {
+      loading.value = false
+    }
   }
 
   return {

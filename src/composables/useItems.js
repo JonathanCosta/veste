@@ -16,8 +16,14 @@ export function useItems() {
 
   async function loadItems() {
     loading.value = true
-    items.value = await getItems()
-    loading.value = false
+    try {
+      items.value = await getItems()
+    } catch (e) {
+      console.error('Failed to load items:', e)
+      items.value = []
+    } finally {
+      loading.value = false
+    }
   }
 
   return {

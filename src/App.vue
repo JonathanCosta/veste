@@ -29,4 +29,19 @@ import BottomNav from './components/BottomNav.vue'
   opacity: 0;
   transform: translateY(-10px);
 }
+
+.list-enter-active,
+.list-leave-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.list-move {
+  transition: transform 0.3s ease;
+}
 </style>

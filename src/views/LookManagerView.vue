@@ -10,10 +10,12 @@ const showSheet = ref(false)
 const selectedLook = ref(null)
 const lookItems = ref([])
 const itemUrls = ref([])
+let isActive = true
 
 onMounted(loadLooks)
 
 onUnmounted(() => {
+  isActive = false
   revokeAllUrls()
 })
 
@@ -28,6 +30,7 @@ async function openLook(look) {
   revokeAllUrls()
   selectedLook.value = look
   const items = await getItemsByIds(look.itemIds || [])
+  if (!isActive) return
   lookItems.value = items
   itemUrls.value = items.map((item) =>
     item.imageBlob ? URL.createObjectURL(item.imageBlob) : null,

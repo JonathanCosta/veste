@@ -13,6 +13,7 @@ import { compressImage } from '../services/imageService'
 const route = useRoute()
 const router = useRouter()
 
+const fileInput = ref(null)
 const isNew = computed(() => route.params.id === 'new')
 
 const item = ref(null)
@@ -36,15 +37,21 @@ onMounted(async () => {
     loading.value = false
     return
   }
-  item.value = await getItem(id)
-  if (item.value?.imageBlob) {
-    imageUrl.value = URL.createObjectURL(item.value.imageBlob)
+  try {
+    item.value = await getItem(id)
+    if (item.value?.imageBlob) {
+      imageUrl.value = URL.createObjectURL(item.value.imageBlob)
+    }
+    if (item.value) {
+      const lookRefs = await getLooksByItem(id)
+      looks.value = lookRefs
+    }
+  } catch (e) {
+    console.error('Failed to load item:', e)
+    item.value = null
+  } finally {
+    loading.value = false
   }
-  if (item.value) {
-    const lookRefs = await getLooksByItem(id)
-    looks.value = lookRefs
-  }
-  loading.value = false
 })
 
 onUnmounted(() => {
@@ -122,7 +129,7 @@ async function handleDelete() {
 
     <div
       class="aspect-[3/4] max-h-[40vh] rounded-2xl bg-white/70 shadow-soft overflow-hidden mb-5 flex items-center justify-center cursor-pointer active:scale-[0.97] transition-transform duration-200"
-      @click="$refs.fileInput.click()"
+      @click="fileInput?.click()"
     >
       <img v-if="imageUrl" :src="imageUrl" class="w-full h-full object-cover" />
       <div v-else class="text-center text-text-muted">
