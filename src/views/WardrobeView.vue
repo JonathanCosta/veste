@@ -49,11 +49,11 @@ onMounted(loadItems)
 
     <div class="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-none">
       <button
-        class="shrink-0 px-3.5 py-1.5 text-xs font-medium rounded-full transition-all duration-200 active:scale-90"
+        class="shrink-0 px-4 py-2 text-xs font-medium uppercase tracking-wider transition-all duration-200 active:scale-95"
         :class="
           activeFilter === ''
-            ? 'bg-accent text-white'
-            : 'bg-white/70 text-text-muted ring-1 ring-gray-200/50'
+            ? 'text-white bg-accent rounded-lg shadow-[0_6px_20px_rgba(45,45,45,0.25)] border border-accent font-bold'
+            : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
         "
         @click="activeFilter = ''"
       >
@@ -62,11 +62,11 @@ onMounted(loadItems)
       <button
         v-for="type in ITEM_TYPES"
         :key="type"
-        class="shrink-0 px-3.5 py-1.5 text-xs font-medium rounded-full capitalize transition-all duration-200 active:scale-90"
+        class="shrink-0 px-4 py-2 text-xs font-medium uppercase tracking-wider transition-all duration-200 active:scale-95"
         :class="
           activeFilter === type
-            ? 'bg-accent text-white'
-            : 'bg-white/70 text-text-muted ring-1 ring-gray-200/50'
+            ? 'text-white bg-accent rounded-lg shadow-[0_6px_20px_rgba(45,45,45,0.25)] border border-accent font-bold'
+            : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
         "
         @click="activeFilter = activeFilter === type ? '' : type"
       >
@@ -84,22 +84,25 @@ onMounted(loadItems)
       </button>
     </div>
 
+    <!-- Drawer Front Container — simulates the front panel of an open drawer -->
     <template v-if="loading">
-      <div class="bg-white/50 rounded-3xl p-4 shadow-inner">
-        <div class="grid grid-cols-2 gap-3">
-          <div v-for="n in 4" :key="n" class="rounded-2xl bg-white/50 animate-pulse">
-            <div class="aspect-[3/4] bg-gray-100 rounded-t-2xl" />
-            <div class="p-2.5 space-y-2">
-              <div class="h-3 bg-gray-100 rounded w-3/4" />
-              <div class="h-2 bg-gray-100 rounded w-1/2" />
-            </div>
+      <div
+        class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(255,255,255,0.8)] border-t border-gray-200/60 mt-4 min-h-[70vh]"
+      >
+        <div class="grid grid-cols-2 gap-4 animate-pulse">
+          <div v-for="n in 4" :key="n" class="flex flex-col gap-2">
+            <div class="w-full aspect-[3/4] bg-neutral-200 rounded-2xl" />
+            <div class="w-3/4 h-3 bg-neutral-200 rounded mt-1" />
+            <div class="w-1/2 h-2.5 bg-neutral-200 rounded" />
           </div>
         </div>
       </div>
     </template>
 
     <template v-else-if="filteredItems.length === 0">
-      <div class="bg-white/50 rounded-3xl p-4 shadow-inner">
+      <div
+        class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(255,255,255,0.8)] border-t border-gray-200/60 mt-4 min-h-[70vh]"
+      >
         <div class="text-center py-16">
           <p class="text-text-muted text-sm">Nenhuma peça encontrada</p>
         </div>
@@ -107,7 +110,12 @@ onMounted(loadItems)
     </template>
 
     <!-- Drawer container — simulates an open drawer with recessed depth -->
-    <div v-else class="bg-white/50 rounded-3xl p-4 shadow-inner">
+    <div
+      v-else
+      class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(255,255,255,0.8)] border-t border-gray-200/60 mt-4 min-h-[70vh]"
+    >
+      <!-- Decorative slit simulating the drawer slide groove -->
+      <div class="w-full h-[1px] bg-gray-200/80 mb-6 shadow-[0_1px_0_rgba(255,255,255,0.9)]"></div>
       <TransitionGroup name="list" tag="div" class="grid grid-cols-2 gap-3">
         <div v-for="item in filteredItems" :key="item.id" @click="router.push(`/item/${item.id}`)">
           <ItemCard :item="item" />

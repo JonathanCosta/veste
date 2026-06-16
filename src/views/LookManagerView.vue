@@ -168,6 +168,12 @@ async function handleDelete(look) {
 function getItemUrl(index) {
   return itemUrls.value[index] || null
 }
+
+function getItemThumbUrl(itemId) {
+  const idx = allItems.value.findIndex((i) => i.id === itemId)
+  if (idx === -1) return null
+  return allItemUrls.value[idx] || null
+}
 </script>
 
 <template>
@@ -191,34 +197,58 @@ function getItemUrl(index) {
     </button>
 
     <div v-if="loading" class="flex flex-col gap-3">
-      <div v-for="n in 3" :key="n" class="h-24 rounded-2xl bg-white/50 animate-pulse" />
+      <div
+        v-for="n in 3"
+        :key="n"
+        class="bg-white/50 rounded-3xl p-4 animate-pulse flex items-center justify-between"
+      >
+        <div class="flex flex-col gap-2">
+          <div class="h-4 bg-gray-200 rounded w-28" />
+          <div class="h-3 bg-gray-200 rounded w-16" />
+        </div>
+        <div class="flex -space-x-3 pr-2">
+          <div v-for="m in 3" :key="m" class="w-12 h-16 bg-gray-200 rounded shadow-md" />
+        </div>
+      </div>
     </div>
 
     <TransitionGroup v-else name="list" tag="div" class="flex flex-col gap-3">
       <div
         v-for="look in looks"
         :key="look.id"
-        class="rounded-2xl bg-white shadow-soft p-4 active:scale-[0.97] transition-transform duration-200 cursor-pointer"
+        class="bg-white rounded-3xl p-4 shadow-soft border border-gray-100 flex items-center justify-between transition-transform active:scale-[0.99] cursor-pointer"
         @click="openLook(look)"
       >
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium">{{ look.description || 'Look sem nome' }}</p>
-            <p class="text-xs text-text-muted mt-0.5">{{ look.itemIds?.length || 0 }} peças</p>
-          </div>
-          <svg
-            class="w-5 h-5 text-text-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div class="flex flex-col gap-1">
+          <h3 class="font-bold text-base text-text-main tracking-tight">
+            {{ look.description || 'Look Sem Nome' }}
+          </h3>
+          <span
+            class="text-xs font-medium text-text-muted bg-gray-100 px-2.5 py-1 rounded-md w-fit"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
+            {{ look.itemIds?.length || 0 }} peças
+          </span>
+        </div>
+
+        <!-- Polaroid Stack — up to 3 item photos with physical rotation -->
+        <div class="flex items-center -space-x-5 pr-2 select-none">
+          <div
+            v-for="(itemId, idx) in (look.itemIds || []).slice(0, 3)"
+            :key="itemId"
+            :class="[
+              'w-12 h-16 bg-white p-0.5 rounded shadow-md border border-gray-200/60 transform object-cover flex-shrink-0 transition-transform',
+              idx === 0 ? '-rotate-6' : '',
+              idx === 1 ? 'rotate-3 translate-y-0.5 z-10' : '',
+              idx === 2 ? 'rotate-12 z-20' : '',
+            ]"
+          >
+            <img
+              v-if="getItemThumbUrl(itemId)"
+              :src="getItemThumbUrl(itemId)"
+              class="w-full h-full object-cover rounded-sm"
+              alt=""
             />
-          </svg>
+          </div>
         </div>
       </div>
     </TransitionGroup>
@@ -234,10 +264,14 @@ function getItemUrl(index) {
           <div
             class="relative w-full bg-white rounded-t-3xl shadow-soft-lg p-6 pb-10 max-h-[70vh] overflow-y-auto"
           >
-            <!-- Minimalist drawer handle -->
-            <div class="flex flex-col items-center mb-5">
-              <div class="w-14 h-1.5 bg-accent/10 rounded-full shadow-inner" />
-              <div class="w-10 h-px bg-accent/5 mt-0.5 rounded-full" />
+            <!-- 3D Pull Handle — leather/metal knob -->
+            <div class="w-full flex justify-center pt-3 pb-5 cursor-grab active:cursor-grabbing">
+              <div
+                class="w-14 h-3.5 bg-accent rounded-full shadow-[0_3px_6px_rgba(0,0,0,0.2),inset_0_-2px_3px_rgba(0,0,0,0.4)] border border-neutral-700 relative flex items-center justify-center"
+              >
+                <!-- Metallic central fixation pin -->
+                <div class="w-1 h-1 bg-neutral-400 rounded-full shadow-inner"></div>
+              </div>
             </div>
 
             <h2 class="text-lg font-bold mb-1">{{ selectedLook?.description || 'Look' }}</h2>
@@ -320,10 +354,14 @@ function getItemUrl(index) {
           <div
             class="relative w-full bg-white rounded-t-3xl shadow-soft-lg p-6 pb-10 max-h-[80vh] overflow-y-auto"
           >
-            <!-- Minimalist drawer handle -->
-            <div class="flex flex-col items-center mb-5">
-              <div class="w-14 h-1.5 bg-accent/10 rounded-full shadow-inner" />
-              <div class="w-10 h-px bg-accent/5 mt-0.5 rounded-full" />
+            <!-- 3D Pull Handle — leather/metal knob -->
+            <div class="w-full flex justify-center pt-3 pb-5 cursor-grab active:cursor-grabbing">
+              <div
+                class="w-14 h-3.5 bg-accent rounded-full shadow-[0_3px_6px_rgba(0,0,0,0.2),inset_0_-2px_3px_rgba(0,0,0,0.4)] border border-neutral-700 relative flex items-center justify-center"
+              >
+                <!-- Metallic central fixation pin -->
+                <div class="w-1 h-1 bg-neutral-400 rounded-full shadow-inner"></div>
+              </div>
             </div>
 
             <h2 class="text-lg font-bold mb-1">Novo Look</h2>

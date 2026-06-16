@@ -51,8 +51,26 @@ watch(
         class="w-full h-full object-cover"
         loading="lazy"
       />
-      <div v-else class="w-full h-full flex items-center justify-center text-text-muted text-sm">
-        sem foto
+      <div
+        v-else
+        class="w-full h-full bg-gradient-to-b from-[#F9F9F7] to-[#EDEDE8] flex flex-col items-center justify-center p-4 select-none"
+      >
+        <!-- Tailoring Hanger Minimalist SVG -->
+        <svg
+          class="w-10 h-10 text-neutral-400/70 stroke-[1.2]"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 3a3 3 0 00-3 3v1m3-4a3 3 0 013 3v1m-3-4v4m0 0L3 13.5a1.5 1.5 0 00.5 2.5h17a1.5 1.5 0 00.5-2.5L12 8z"
+          />
+        </svg>
+        <span class="text-[10px] font-bold uppercase tracking-widest text-neutral-400/60 mt-3"
+          >Sem Peça</span
+        >
       </div>
     </div>
     <div class="p-2.5">

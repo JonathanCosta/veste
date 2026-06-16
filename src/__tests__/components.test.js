@@ -41,11 +41,11 @@ describe('ItemCard.vue', () => {
     expect(wrapper.text()).toContain('Sem descrição')
   })
 
-  it('shows "sem foto" when no imageBlob', () => {
+  it('shows placeholder SVG when no imageBlob', () => {
     const wrapper = mount(ItemCard, {
       props: { item: baseItem },
     })
-    expect(wrapper.text()).toContain('sem foto')
+    expect(wrapper.text()).toContain('Sem Peça')
   })
 
   it('renders image when imageBlob is provided', async () => {
