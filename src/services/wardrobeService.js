@@ -27,6 +27,11 @@ export async function deleteItem(id) {
   await db.items.delete(id)
 }
 
+/**
+ * Get all items ordered by creation date (newest first).
+ * NOTA: Carrega todos os itens na memória. Para >500 itens,
+ * considere implementar paginação via cursor do IndexedDB.
+ */
 export async function getItems() {
   return db.items.reverse().sortBy('createdAt')
 }

@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import ItemCard from '../components/ItemCard.vue'
 import { useItems } from '../composables/useItems'
+import { labelForType } from '../utils/labels'
 import { ITEM_TYPES } from '../services/wardrobeService'
 
 const router = useRouter()
@@ -11,6 +12,11 @@ const search = ref('')
 const activeFilter = ref('')
 const visibleCount = ref(20)
 const PAGE_SIZE = 20
+const isLoadingMore = ref(false)
+
+// IntersectionObserver for infinite scroll
+const sentinel = ref(null)
+let observer = null
 
 const filteredItems = computed(() => {
   let list = items.value
@@ -33,26 +39,63 @@ const hasMore = computed(() => {
 })
 
 function loadMore() {
+  if (isLoadingMore.value) return
+  isLoadingMore.value = true
   visibleCount.value += PAGE_SIZE
+  nextTick(() => {
+    isLoadingMore.value = false
+  })
 }
 
 // Reset pagination when filter or search changes
 function resetFilter() {
   activeFilter.value = ''
   visibleCount.value = PAGE_SIZE
+  reattachObserver()
 }
 
 function toggleFilter(type) {
   activeFilter.value = activeFilter.value === type ? '' : type
   visibleCount.value = PAGE_SIZE
+  reattachObserver()
 }
 
 function handleSearchInput(val) {
   search.value = val
   visibleCount.value = PAGE_SIZE
+  reattachObserver()
 }
 
-onMounted(loadItems)
+function reattachObserver() {
+  nextTick(() => {
+    observer?.disconnect()
+    if (sentinel.value && hasMore.value) {
+      observer?.observe(sentinel.value)
+    }
+  })
+}
+
+function setupObserver() {
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && hasMore.value && !isLoadingMore.value) {
+        loadMore()
+      }
+    },
+    { rootMargin: '400px' },
+  )
+  reattachObserver()
+}
+
+onMounted(async () => {
+  await loadItems()
+  setupObserver()
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
+  observer = null
+})
 </script>
 
 <template>
@@ -100,30 +143,20 @@ onMounted(loadItems)
         "
         @click="toggleFilter(type)"
       >
-        {{
-          type === 'top'
-            ? 'Parte de Cima'
-            : type === 'bottom'
-              ? 'Parte de Baixo'
-              : type === 'full'
-                ? 'Inteiro'
-                : type === 'shoes'
-                  ? 'Calçados'
-                  : 'Acessórios'
-        }}
+        {{ labelForType(type) }}
       </button>
     </div>
 
-    <!-- Drawer Front Container — simulates the front panel of an open drawer -->
+    <!-- Drawer Front Container — initial loading skeleton -->
     <template v-if="loading">
       <div
         class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(255,255,255,0.8)] border-t border-gray-200/60 mt-4 min-h-[70vh]"
       >
         <div class="grid grid-cols-2 gap-4 animate-pulse">
-          <div v-for="n in 4" :key="n" class="flex flex-col gap-2">
-            <div class="w-full aspect-[3/4] bg-neutral-200 rounded-2xl" />
-            <div class="w-3/4 h-3 bg-neutral-200 rounded mt-1" />
-            <div class="w-1/2 h-2.5 bg-neutral-200 rounded" />
+          <div v-for="n in 6" :key="n" class="flex flex-col gap-2">
+            <div class="w-full aspect-[3/4] bg-gray-200 rounded-2xl shadow-soft" />
+            <div class="w-3/4 h-3 bg-gray-200 rounded mt-1" />
+            <div class="w-1/2 h-2.5 bg-gray-200 rounded" />
           </div>
         </div>
       </div>
@@ -146,7 +179,7 @@ onMounted(loadItems)
     >
       <!-- Decorative slit simulating the drawer slide groove -->
       <div class="w-full h-[1px] bg-gray-200/80 mb-6 shadow-[0_1px_0_rgba(255,255,255,0.9)]"></div>
-      <TransitionGroup name="list" tag="div" class="grid grid-cols-2 gap-3">
+      <TransitionGroup name="list" tag="div" class="grid grid-cols-2 gap-3 drawer-grid">
         <div
           v-for="(item, index) in paginatedItems"
           :key="item.id"
@@ -157,10 +190,13 @@ onMounted(loadItems)
         </div>
       </TransitionGroup>
 
-      <!-- Load more button -->
+      <!-- Sentinel for infinite scroll -->
+      <div ref="sentinel" class="h-4" />
+
+      <!-- Load more button (fallback) -->
       <button
         v-if="hasMore"
-        class="w-full mt-4 py-3 text-sm text-text-muted font-medium rounded-2xl ring-1 ring-gray-200 bg-white/80 active:scale-[0.97] transition-transform duration-200"
+        class="w-full mt-2 py-3 text-sm text-text-muted font-medium rounded-2xl ring-1 ring-gray-200 bg-white/80 active:scale-[0.97] transition-transform duration-200"
         @click="loadMore"
       >
         Ver mais {{ Math.min(PAGE_SIZE, filteredItems.length - visibleCount) }} peças
@@ -180,5 +216,10 @@ onMounted(loadItems)
 
 .list-enter-active {
   transition-delay: calc(var(--index, 0) * 30ms);
+}
+
+.drawer-grid > * {
+  content-visibility: auto;
+  contain-intrinsic-size: 320px;
 }
 </style>
