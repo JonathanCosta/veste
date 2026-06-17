@@ -3,14 +3,9 @@ import { ref, nextTick, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Cropper from 'cropperjs'
 import { useDialog } from '../composables/useDialog'
-import {
-  getItem,
-  deleteItem,
-  addItem,
-  updateItem,
-  getLooksByItem,
-  ITEM_TYPES,
-} from '../services/wardrobeService'
+import { useRelatedLookItems } from '../composables/useRelatedLookItems'
+import { labelForType } from '../utils/labels'
+import { getItem, deleteItem, addItem, updateItem, ITEM_TYPES } from '../services/wardrobeService'
 import { compressImage } from '../services/imageService'
 
 const route = useRoute()
@@ -20,8 +15,13 @@ const dialog = useDialog()
 const fileInput = ref(null)
 const isNew = computed(() => route.params.id === 'new')
 
+const itemId = computed(() => {
+  const id = route.params.id
+  return id && id !== 'new' ? Number(id) : null
+})
+const { relatedLooks, revokeAll: revokeLookUrls } = useRelatedLookItems(itemId)
+
 const item = ref(null)
-const looks = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const imageUrl = ref(null)
@@ -64,7 +64,6 @@ let cropperInstance = null
 async function loadItem(id) {
   loading.value = true
   item.value = null
-  looks.value = []
   showCrop.value = false
   destroyCropper()
   if (imageUrl.value) {
@@ -89,10 +88,6 @@ async function loadItem(id) {
     if (item.value?.imageBlob) {
       imageUrl.value = URL.createObjectURL(item.value.imageBlob)
     }
-    if (item.value) {
-      const lookRefs = await getLooksByItem(numericId)
-      looks.value = lookRefs
-    }
   } catch (e) {
     console.error('Failed to load item:', e)
     item.value = null
@@ -111,6 +106,7 @@ watch(
 
 onUnmounted(() => {
   destroyCropper()
+  revokeLookUrls()
   if (imageUrl.value) {
     URL.revokeObjectURL(imageUrl.value)
   }
@@ -314,9 +310,15 @@ async function handleDelete() {
 
 <template>
   <div class="min-h-screen">
-    <!-- Loading -->
-    <div v-if="loading" class="animate-pulse">
-      <div class="h-[50vh] bg-gray-100" />
+    <!-- Loading skeleton -->
+    <div v-if="loading" class="animate-pulse px-4 pt-6">
+      <div class="w-full aspect-[3/4] bg-gray-200 rounded-2xl shadow-soft mb-4" />
+      <div class="space-y-3">
+        <div class="h-6 bg-gray-200 rounded w-3/4" />
+        <div class="h-4 bg-gray-200 rounded w-1/3" />
+        <div class="h-4 bg-gray-200 rounded w-1/2 mt-4" />
+        <div class="h-10 bg-gray-200 rounded-2xl w-full mt-6" />
+      </div>
     </div>
 
     <!-- Create mode -->
@@ -381,17 +383,7 @@ async function handleDelete() {
               "
               @click="formType = t"
             >
-              {{
-                t === 'top'
-                  ? 'Parte de Cima'
-                  : t === 'bottom'
-                    ? 'Parte de Baixo'
-                    : t === 'full'
-                      ? 'Inteiro'
-                      : t === 'shoes'
-                        ? 'Calçados'
-                        : 'Acessórios'
-              }}
+              {{ labelForType(t) }}
             </button>
           </div>
         </div>
@@ -447,7 +439,7 @@ async function handleDelete() {
 
       <div class="px-4 pt-5">
         <h1 class="text-xl font-bold">{{ item.description || 'Sem descrição' }}</h1>
-        <p class="text-sm text-text-muted capitalize mt-1">{{ item.type }}</p>
+        <p class="text-sm text-text-muted capitalize mt-1">{{ labelForType(item.type) }}</p>
 
         <div class="flex gap-3 mt-6">
           <button
@@ -464,20 +456,62 @@ async function handleDelete() {
           </button>
         </div>
 
-        <section v-if="looks.length" class="mt-8">
+        <section v-if="relatedLooks.length" class="mt-8">
           <h2 class="text-sm font-medium uppercase tracking-wider text-text-muted mb-3">
             Looks com esta peça
           </h2>
-          <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-            <div
-              v-for="look in looks"
+          <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+            <router-link
+              v-for="look in relatedLooks"
               :key="look.id"
-              class="shrink-0 w-36 rounded-2xl bg-white shadow-soft p-3 active:scale-95 transition-transform duration-200 cursor-pointer"
-              @click="router.push(`/looks?edit=${look.id}`)"
+              :to="`/looks?edit=${look.id}`"
+              class="shrink-0 w-44 bg-white rounded-2xl shadow-soft p-3 active:scale-95 transition-transform duration-200"
             >
-              <p class="text-xs font-medium truncate">{{ look.description || 'Look' }}</p>
-              <p class="text-[10px] text-text-muted mt-1">{{ look.itemIds?.length || 0 }} peças</p>
-            </div>
+              <!-- Mini Polaroid Stack -->
+              <div class="flex items-center justify-center -space-x-4 h-20 mb-2 select-none">
+                <div
+                  v-for="(lookItem, idx) in look.items.slice(0, 3)"
+                  :key="lookItem.id"
+                  :class="[
+                    'w-11 h-14 bg-white p-0.5 rounded shadow-md border border-gray-200/60 transform flex-shrink-0 transition-transform',
+                    idx === 0 ? '-rotate-6 z-0' : '',
+                    idx === 1 ? 'rotate-3 z-10' : '',
+                    idx === 2 ? 'rotate-12 z-20' : '',
+                  ]"
+                >
+                  <img
+                    v-if="look.itemUrls[idx]"
+                    :src="look.itemUrls[idx]"
+                    class="w-full h-full object-cover rounded-sm"
+                    alt=""
+                  />
+                  <div
+                    v-else
+                    class="w-full h-full bg-gradient-to-b from-[#F9F9F7] to-[#EDEDE8] rounded-sm flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-4 h-4 text-text-muted/50"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 3a3 3 0 00-3 3v1m3-4a3 3 0 013 3v1m-3-4v4m0 0L3 13.5a1.5 1.5 0 00.5 2.5h17a1.5 1.5 0 00.5-2.5L12 8z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs font-medium truncate text-text-main">
+                {{ look.description || 'Look' }}
+              </p>
+              <p class="text-[10px] text-text-muted mt-0.5">
+                {{ look.itemIds?.length || 0 }} peças
+              </p>
+            </router-link>
           </div>
         </section>
       </div>
@@ -545,17 +579,7 @@ async function handleDelete() {
               "
               @click="formType = t"
             >
-              {{
-                t === 'top'
-                  ? 'Parte de Cima'
-                  : t === 'bottom'
-                    ? 'Parte de Baixo'
-                    : t === 'full'
-                      ? 'Inteiro'
-                      : t === 'shoes'
-                        ? 'Calçados'
-                        : 'Acessórios'
-              }}
+              {{ labelForType(t) }}
             </button>
           </div>
         </div>
