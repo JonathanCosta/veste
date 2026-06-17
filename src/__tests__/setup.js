@@ -50,6 +50,19 @@ vi.stubGlobal(
   },
 )
 
+// Polyfill for IntersectionObserver (used by WardrobeView infinite scroll)
+if (!globalThis.IntersectionObserver) {
+  class MockIntersectionObserver {
+    constructor(callback) {
+      this.callback = callback
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.IntersectionObserver = MockIntersectionObserver
+}
+
 // Polyfill for URL.createObjectURL needed by image tests
 if (!globalThis.URL.createObjectURL) {
   globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock')

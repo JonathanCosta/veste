@@ -102,8 +102,8 @@ async function handleFinalize(msg) {
     return
   }
 
-  // Transfer the blob to main thread (zero-copy)
-  self.postMessage({ type: 'SUCCESS', blob }, [blob])
+  // Send the blob to main thread (structured clone)
+  self.postMessage({ type: 'SUCCESS', blob })
 }
 
 // ─── Import ───────────────────────────────────────────────────────

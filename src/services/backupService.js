@@ -226,7 +226,7 @@ export async function importBackup(file) {
       .arrayBuffer()
       .then((buffer) => {
         const blob = new Blob([buffer], { type: file.type || 'application/zip' })
-        worker.postMessage({ type: 'IMPORT_START', zipBlob: blob }, [blob])
+        worker.postMessage({ type: 'IMPORT_START', zipBlob: blob })
       })
       .catch((err) => {
         cleanup()
