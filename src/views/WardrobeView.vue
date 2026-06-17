@@ -33,7 +33,7 @@ onMounted(loadItems)
     </div>
 
     <header class="mt-2 mb-5">
-      <h1 class="text-2xl font-bold tracking-tight">Guarda-Roupa</h1>
+      <h1 class="text-2xl font-bold tracking-tight">guarda roupa</h1>
       <p class="text-sm text-text-muted mt-0.5">{{ filteredItems.length }} peças</p>
     </header>
 

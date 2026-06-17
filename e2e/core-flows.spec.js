@@ -66,12 +66,12 @@ async function createItem(page, description = 'Camiseta branca básica', type = 
   })
 
   // Wait for crop overlay
-  const cropOverlay = page.getByText('Ajustar foto')
+  const cropOverlay = page.getByText('Ajustar Foto')
   await expect(cropOverlay).toBeVisible({ timeout: 5000 })
   await page.waitForTimeout(800)
 
   // Confirm crop
-  await page.getByText('Confirmar', { exact: true }).click()
+  await page.getByText('Concluir', { exact: true }).click()
 
   // Wait for overlay to close
   await expect(cropOverlay).not.toBeVisible({ timeout: 5000 })
@@ -125,7 +125,7 @@ test.describe('🔀 Navigation', () => {
     await expect(page.locator('h1')).toContainText('Configurações')
 
     await navTo(page, 'Peças')
-    await expect(page.locator('h1')).toContainText('Guarda-Roupa')
+    await expect(page.locator('h1')).toContainText('guarda roupa')
   })
 
   test('should highlight active tab', async ({ page }) => {

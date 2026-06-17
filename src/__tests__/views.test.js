@@ -83,7 +83,7 @@ describe('WardrobeView.vue', () => {
   it('renders header and search input', async () => {
     const View = (await import('../views/WardrobeView.vue')).default
     const { wrapper } = await mountView(View)
-    expect(wrapper.text()).toContain('Guarda-Roupa')
+    expect(wrapper.text()).toContain('guarda roupa')
     expect(wrapper.find('input[type="search"]').exists()).toBe(true)
   })
 
