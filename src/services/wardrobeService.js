@@ -24,6 +24,8 @@ export async function deleteItem(id) {
       await db.looks.delete(look.id)
     }
   }
+  // Cascade: remove calendar logs referencing this item
+  await db.calendar_logs.where({ entityType: 'item', entityId: id }).delete()
   await db.items.delete(id)
 }
 
@@ -73,6 +75,8 @@ export async function saveLookPhoto(lookId, blob) {
 }
 
 export async function deleteLook(id) {
+  // Cascade: remove calendar logs referencing this look
+  await db.calendar_logs.where({ entityType: 'look', entityId: id }).delete()
   await db.looks.delete(id)
 }
 

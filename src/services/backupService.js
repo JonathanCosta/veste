@@ -138,10 +138,12 @@ export async function exportBackup(options = {}) {
         const allLooks = await db.looks.toArray()
 
         // Strip Blobs from data before serialization
+        const allCalendarLogs = await db.calendar_logs.toArray()
         const data = {
           items: allItems.map(({ imageBlob, ...rest }) => rest),
           categories: allCategories,
           looks: allLooks.map(({ imageBlob, ...rest }) => rest),
+          calendar_logs: allCalendarLogs,
         }
         const dataJson = JSON.stringify(data, null, 2)
 
@@ -185,21 +187,32 @@ export async function importBackup(file) {
 
         case 'SUCCESS_IMPORT': {
           try {
-            await db.transaction('rw', db.items, db.categories, db.looks, async () => {
-              await db.items.clear()
-              await db.categories.clear()
-              await db.looks.clear()
+            await db.transaction(
+              'rw',
+              db.items,
+              db.categories,
+              db.looks,
+              db.calendar_logs,
+              async () => {
+                await db.items.clear()
+                await db.categories.clear()
+                await db.looks.clear()
+                await db.calendar_logs.clear()
 
-              for (const item of msg.items || []) {
-                await db.items.put(item)
-              }
-              for (const cat of msg.categories || []) {
-                await db.categories.put(cat)
-              }
-              for (const look of msg.looks || []) {
-                await db.looks.put(look)
-              }
-            })
+                for (const item of msg.items || []) {
+                  await db.items.put(item)
+                }
+                for (const cat of msg.categories || []) {
+                  await db.categories.put(cat)
+                }
+                for (const look of msg.looks || []) {
+                  await db.looks.put(look)
+                }
+                for (const log of msg.calendar_logs || []) {
+                  await db.calendar_logs.put(log)
+                }
+              },
+            )
             cleanup()
             resolve()
           } catch (err) {

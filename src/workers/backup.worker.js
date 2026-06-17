@@ -17,7 +17,7 @@
  *     { type: 'PROGRESS', phase: string, current: number, total: number }
  *     { type: 'SUCCESS', blob: Blob }
  *       - Transferable blob for download
- *     { type: 'SUCCESS_IMPORT', items: Array, categories: Array, looks: Array }
+ *     { type: 'SUCCESS_IMPORT', items: Array, categories: Array, looks: Array, calendar_logs: Array }
  *       - Parsed + hydrated data ready for Dexie insertion
  *     { type: 'ERROR', error: string }
  */
@@ -138,6 +138,9 @@ async function handleImport(msg) {
   if (!Array.isArray(parsed.looks)) {
     throw new Error('Backup inválido: looks deve ser um array')
   }
+  if (!Array.isArray(parsed.calendar_logs)) {
+    throw new Error('Backup inválido: calendar_logs deve ser um array')
+  }
 
   // Validate IDs
   for (const item of parsed.items) {
@@ -153,7 +156,11 @@ async function handleImport(msg) {
     }
   }
 
-  const total = parsed.items.length + parsed.categories.length + parsed.looks.length
+  const total =
+    parsed.items.length +
+    parsed.categories.length +
+    parsed.looks.length +
+    parsed.calendar_logs.length
   let processed = 0
 
   // Hydrate items with blobs
@@ -201,5 +208,6 @@ async function handleImport(msg) {
     items: hydratedItems,
     categories: parsed.categories,
     looks: hydratedLooks,
+    calendar_logs: parsed.calendar_logs,
   })
 }
