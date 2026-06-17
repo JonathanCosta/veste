@@ -31,7 +31,7 @@ describe('ItemCard.vue', () => {
       props: { item: baseItem },
     })
     expect(wrapper.text()).toContain('Camiseta básica')
-    expect(wrapper.text()).toContain('top')
+    expect(wrapper.text()).toContain('Parte de Cima')
   })
 
   it('shows "sem descrição" placeholder when description is missing', () => {

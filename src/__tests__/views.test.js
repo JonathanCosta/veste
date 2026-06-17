@@ -158,7 +158,7 @@ describe('ItemDetailView.vue', () => {
 
     await vi.waitFor(() => {
       expect(wrapper.text()).toContain('Tênis branco')
-      expect(wrapper.text()).toContain('shoes')
+      expect(wrapper.text()).toContain('Calçados')
     })
   })
 

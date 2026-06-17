@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { labelForType } from '../utils/labels'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -78,7 +79,7 @@ watch(
         {{ item.description || 'Sem descrição' }}
       </p>
       <p class="text-[10px] text-text-muted uppercase tracking-wider mt-0.5">
-        {{ item.type }}
+        {{ labelForType(item.type) }}
       </p>
     </div>
   </div>
