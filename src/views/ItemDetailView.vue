@@ -26,6 +26,7 @@ const loading = ref(true)
 const saving = ref(false)
 const imageUrl = ref(null)
 const imageFile = ref(null)
+const isCropping = ref(false)
 
 // Form fields
 const formType = ref('top')
@@ -42,6 +43,7 @@ function enterEditMode() {
 }
 
 function cancelEdit() {
+  if (showCrop.value) cancelCrop()
   isEditing.value = false
   // Revoke any newly cropped image and restore original
   if (imageFile.value) {
@@ -140,6 +142,13 @@ function onFileSelected(event) {
   const file = event.target.files?.[0]
   if (!file) return
 
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    dialog.alert('Selecione apenas arquivos de imagem.')
+    resetFileInput()
+    return
+  }
+
   // Revoke previous preview
   if (imageUrl.value) {
     URL.revokeObjectURL(imageUrl.value)
@@ -147,39 +156,60 @@ function onFileSelected(event) {
   }
   imageFile.value = null
 
-  // Read file as data URL for Cropper.js
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    cropImageUrl.value = e.target.result
-    showCrop.value = true
-    // Init Cropper after DOM renders
-    nextTick(() => {
-      const container = cropContainerRef.value
-      if (!container) return
-      const img = container.querySelector('img')
-      if (!img) return
-      const startCropper = () => {
-        destroyCropper()
-        cropperInstance = new Cropper(img, {
-          aspectRatio: 3 / 4,
-          viewMode: 2,
-          background: false,
-          autoCropArea: 0.85,
-          responsive: true,
-        })
+  // Use Blob URL instead of data URL (more memory efficient)
+  cropImageUrl.value = URL.createObjectURL(file)
+  showCrop.value = true
+
+  // Init Cropper after DOM renders
+  nextTick(() => {
+    const container = cropContainerRef.value
+    if (!container) return
+    const img = container.querySelector('img')
+    if (!img) return
+    const startCropper = () => {
+      // Only destroy Cropper instance, do NOT call destroyCropper() because
+      // it revokes the Blob URL (URL.revokeObjectURL) which would invalidate
+      // the <img> src before Cropper.js can initialize.
+      if (cropperInstance) {
+        cropperInstance.destroy()
+        cropperInstance = null
       }
-      if (img.complete) {
-        startCropper()
-      } else {
-        img.onload = startCropper
+      cropperInstance = new Cropper(img, {
+        template: `<cropper-canvas>
+    <cropper-image rotatable scalable skewable translatable></cropper-image>
+    <cropper-shade hidden></cropper-shade>
+    <cropper-handle action="select" plain></cropper-handle>
+    <cropper-selection initial-coverage="1" movable resizable aspect-ratio="0.75">
+      <cropper-grid role="grid" bordered covered></cropper-grid>
+      <cropper-crosshair centered></cropper-crosshair>
+      <cropper-handle action="move" theme-color="rgba(255, 255, 255, 0.35)"></cropper-handle>
+      <cropper-handle action="n-resize"></cropper-handle>
+      <cropper-handle action="e-resize"></cropper-handle>
+      <cropper-handle action="s-resize"></cropper-handle>
+      <cropper-handle action="w-resize"></cropper-handle>
+      <cropper-handle action="ne-resize"></cropper-handle>
+      <cropper-handle action="nw-resize"></cropper-handle>
+      <cropper-handle action="se-resize"></cropper-handle>
+      <cropper-handle action="sw-resize"></cropper-handle>
+    </cropper-selection>
+  </cropper-canvas>`,
+      })
+    }
+    if (img.complete) {
+      startCropper()
+    } else {
+      img.onload = startCropper
+      img.onerror = () => {
+        dialog.alert('Falha ao carregar a imagem.')
+        cancelCrop()
       }
-    })
-  }
-  reader.readAsDataURL(file)
+    }
+  })
 }
 
 async function confirmCrop() {
-  if (!cropperInstance) return
+  if (!cropperInstance || isCropping.value) return
+  isCropping.value = true
   try {
     // Cropper.js v2: use the SELECTION's $toCanvas() which crops to the
     // selected area, unlike the canvas-level $toCanvas() which renders
@@ -216,7 +246,14 @@ async function confirmCrop() {
   } catch (e) {
     console.error('Crop failed:', e)
     dialog.alert('Erro ao recortar imagem: ' + e.message)
+  } finally {
+    isCropping.value = false
   }
+}
+
+function rotateImage(deg) {
+  const imageEl = cropperInstance?.getCropperImage()
+  if (imageEl) imageEl.$rotate(`${deg}deg`)
 }
 
 function cancelCrop() {
@@ -555,24 +592,74 @@ async function handleDelete() {
       <button class="mt-4 text-sm text-accent underline" @click="router.push('/')">Voltar</button>
     </div>
 
-    <!-- Crop overlay -->
+    <!-- Crop overlay — Estúdio Veste -->
     <Transition name="crop">
-      <div v-if="showCrop" class="fixed inset-0 z-50 flex flex-col bg-black">
-        <!-- Top bar -->
-        <div class="flex items-center justify-between px-4 py-3 bg-black shrink-0">
-          <button class="text-white/80 text-sm" @click="cancelCrop">Cancelar</button>
-          <span class="text-white text-sm font-medium">Ajustar foto</span>
-          <button
-            class="text-white text-sm font-semibold active:scale-95 transition-transform duration-200"
-            @click="confirmCrop"
+      <div v-if="showCrop" class="fixed inset-0 z-[70] flex flex-col bg-black">
+        <div ref="cropContainerRef" class="flex-1 relative w-full h-full overflow-hidden">
+          <!-- Top bar (gradient overlay) -->
+          <div
+            class="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-black/60 to-transparent flex items-center justify-between px-6 z-10"
           >
-            Confirmar
-          </button>
-        </div>
+            <button
+              class="text-sm font-medium text-white/70 tracking-wide active:scale-95 transition-transform"
+              @click="cancelCrop"
+            >
+              Cancelar
+            </button>
+            <h2 class="text-xs font-bold uppercase tracking-widest text-white/90">Ajustar Foto</h2>
+            <button
+              class="text-sm font-bold text-white bg-accent px-4 py-1.5 rounded-full shadow-soft active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isCropping"
+              @click="confirmCrop"
+            >
+              Concluir
+            </button>
+          </div>
 
-        <!-- Cropper container -->
-        <div ref="cropContainerRef" class="flex-1 flex items-center justify-center overflow-hidden">
-          <img v-if="cropImageUrl" :src="cropImageUrl" class="max-w-full max-h-full" />
+          <!-- Cropper image -->
+          <div class="absolute inset-0 w-full h-full bg-studio-bg z-0">
+            <img
+              v-if="cropImageUrl"
+              :src="cropImageUrl"
+              class="block max-w-full max-h-full opacity-0"
+              @error="
+                dialog.alert('Falha ao carregar a imagem.')
+                cancelCrop()
+              "
+            />
+          </div>
+
+          <!-- Bottom toolbar (rotation) -->
+          <div
+            class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-8 flex justify-center gap-8 z-10"
+          >
+            <button
+              class="p-3 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full text-white transition-all"
+              @click="rotateImage(-90)"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+                />
+              </svg>
+            </button>
+            <button
+              class="p-3 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full text-white transition-all"
+              @click="rotateImage(90)"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
@@ -600,21 +687,8 @@ async function handleDelete() {
 </style>
 
 <style>
-/* Override Cropper.js styles for dark background */
-.cropper-view-box {
-  outline: 1px solid theme('colors.accent');
-  outline-color: rgba(45, 45, 45, 0.75);
-}
-.cropper-line {
-  background-color: theme('colors.accent');
-}
-.cropper-point {
-  background-color: theme('colors.accent');
-  width: 10px;
-  height: 10px;
-}
-.cropper-point.point-se {
-  width: 12px;
-  height: 12px;
+cropper-canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 </style>
