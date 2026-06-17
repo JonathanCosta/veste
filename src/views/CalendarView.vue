@@ -1,11 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getLogsByMonth } from '../services/calendarService'
+import DayDetailSheet from '../components/DayDetailSheet.vue'
 
 const currentYear = ref(new Date().getFullYear())
 const currentMonth = ref(new Date().getMonth() + 1) // 1-indexed
 const monthLogs = ref([])
 const loading = ref(true)
+const selectedDate = ref(null)
 
 const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
@@ -76,6 +78,7 @@ function prevMonth() {
   } else {
     currentMonth.value--
   }
+  selectedDate.value = null
   loadMonth()
 }
 
@@ -86,14 +89,20 @@ function nextMonth() {
   } else {
     currentMonth.value++
   }
+  selectedDate.value = null
   loadMonth()
 }
 
 function onDayClick(day) {
   if (!day) return
   const dateStr = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-  // Future: open DayDetailSheet with this date
-  console.log('Day clicked:', dateStr)
+  selectedDate.value = dateStr
+}
+
+function closeSheet() {
+  selectedDate.value = null
+  // Refresh month logs to update dot indicators
+  loadMonth()
 }
 
 onMounted(loadMonth)
@@ -178,5 +187,8 @@ onMounted(loadMonth)
         </template>
       </div>
     </div>
+
+    <!-- Day detail sheet -->
+    <DayDetailSheet v-if="selectedDate" :date="selectedDate" @close="closeSheet" />
   </div>
 </template>
