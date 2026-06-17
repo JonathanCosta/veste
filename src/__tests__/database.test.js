@@ -6,9 +6,9 @@ describe('VesteDB schema', () => {
     await db.open()
   })
 
-  it('has version 1', () => {
+  it('has version 2', () => {
     const v = db.verno ?? db._verno ?? 1
-    expect(v).toBe(1)
+    expect(v).toBe(2)
   })
 
   it('has items store with correct indexes', () => {

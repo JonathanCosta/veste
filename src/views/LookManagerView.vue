@@ -806,10 +806,7 @@ function getLookItemUrl(itemId) {
                         ? 'text-white bg-accent rounded-lg font-bold'
                         : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
                     "
-                    @click="
-                      editFilter = ''
-                      editVisibleCount = EDIT_PAGE_SIZE
-                    "
+                    @click="toggleEditFilter('')"
                   >
                     Todas
                   </button>
@@ -943,10 +940,7 @@ function getLookItemUrl(itemId) {
                     ? 'text-white bg-accent rounded-lg font-bold'
                     : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
                 "
-                @click="
-                  createFilter = ''
-                  createVisibleCount = CREATE_PAGE_SIZE
-                "
+                @click="toggleCreateFilter('')"
               >
                 Todas
               </button>
@@ -1008,9 +1002,7 @@ function getLookItemUrl(itemId) {
               @click="loadMoreCreate"
             >
               Ver mais
-              {{
-                Math.min(CREATE_PAGE_SIZE, createFilteredItems.length - createVisibleCount)
-              }}
+              {{ Math.min(CREATE_PAGE_SIZE, createFilteredItems.length - createVisibleCount) }}
               peças
             </button>
 

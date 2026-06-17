@@ -79,7 +79,7 @@ describe('BottomNav.vue', () => {
       global: { plugins: [router] },
     })
     const buttons = wrapper.findAll('button')
-    expect(buttons).toHaveLength(4)
+    expect(buttons).toHaveLength(5)
   })
 
   it('highlights the active tab', async () => {
@@ -90,8 +90,8 @@ describe('BottomNav.vue', () => {
     })
     // The "Looks" tab should have the accent color class
     const buttons = wrapper.findAll('button')
-    // "Looks" is third tab (index 2)
-    const looksTab = buttons[2]
+    // "Looks" is second tab (index 1)
+    const looksTab = buttons[1]
     expect(looksTab.text()).toContain('Looks')
     // The accent text class should be present
     expect(looksTab.find('span').classes()).toContain('text-accent')
@@ -103,9 +103,9 @@ describe('BottomNav.vue', () => {
     const wrapper = mount(BottomNav, {
       global: { plugins: [router] },
     })
-    // Click "Settings" tab (last one)
+    // Click "Settings" tab (last one, index 4)
     const buttons = wrapper.findAll('button')
-    await buttons[3].trigger('click')
+    await buttons[4].trigger('click')
     expect(pushSpy).toHaveBeenCalledWith('/settings')
     pushSpy.mockRestore()
   })

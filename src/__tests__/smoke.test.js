@@ -33,7 +33,7 @@ describe('Smoke tests - module imports', () => {
   it('router has 4 routes', async () => {
     const mod = await import('../router/index.js')
     expect(mod.default).toBeDefined()
-    expect(mod.default.getRoutes().length).toBe(4)
+    expect(mod.default.getRoutes().length).toBe(5)
   })
 
   it('composables load', async () => {

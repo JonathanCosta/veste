@@ -33,11 +33,11 @@ describe('App.vue', () => {
     })
 
     await vi.waitFor(() => {
-      // BottomNav should be present (4 tabs)
+      // BottomNav should be present (5 tabs)
       const nav = wrapper.find('nav')
       expect(nav.exists()).toBe(true)
       const buttons = nav.findAll('button')
-      expect(buttons).toHaveLength(4)
+      expect(buttons).toHaveLength(5)
       // Current route content should be rendered
       expect(wrapper.text()).toContain('Wardrobe Page')
     })
@@ -61,7 +61,7 @@ describe('App.vue', () => {
     })
   })
 
-  it('has bottom nav with Peças, Novo, Looks, Config tabs', async () => {
+  it('has bottom nav with Peças, Looks, FAB, Calendário, Config tabs', async () => {
     await router.push('/')
     const wrapper = mount(App, {
       global: { plugins: [router] },
@@ -70,9 +70,10 @@ describe('App.vue', () => {
     await vi.waitFor(() => {
       const buttons = wrapper.findAll('nav button')
       expect(buttons[0].text()).toContain('Peças')
-      expect(buttons[1].text()).toContain('Novo')
-      expect(buttons[2].text()).toContain('Looks')
-      expect(buttons[3].text()).toContain('Config')
+      expect(buttons[1].text()).toContain('Looks')
+      // buttons[2] is the FAB — only SVG icon, no visible label text inside the button
+      expect(buttons[3].text()).toContain('Calendário')
+      expect(buttons[4].text()).toContain('Config')
     })
   })
 })
