@@ -2,7 +2,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLooks } from '../composables/useLooks'
-import { getItems, getItemsByIds, addLook, updateLook } from '../services/wardrobeService'
+import { labelForType } from '../utils/labels'
+import {
+  getItems,
+  getItemsByIds,
+  addLook,
+  updateLook,
+  ITEM_TYPES,
+} from '../services/wardrobeService'
 import { compressImage } from '../services/imageService'
 import { useDialog } from '../composables/useDialog'
 
@@ -10,6 +17,15 @@ const router = useRouter()
 const dialog = useDialog()
 
 const { looks, loading, loadLooks, deleteLook } = useLooks()
+
+// Search / filter
+const searchLook = ref('')
+
+const filteredLooks = computed(() => {
+  const q = searchLook.value.trim().toLowerCase()
+  if (!q) return looks.value
+  return looks.value.filter((l) => (l.description || '').toLowerCase().includes(q))
+})
 
 // View look sheet
 const showSheet = ref(false)
@@ -25,10 +41,39 @@ const isEditingLook = ref(false)
 const editDescription = ref('')
 const editingItemIds = ref([])
 const showAddItems = ref(false)
+const originalLookItemIds = ref([])
 
+// Items available to add: those NOT in the original look
 const availableItems = computed(() => {
-  if (!editingItemIds.value.length) return allItems.value
-  return allItems.value.filter((item) => !editingItemIds.value.includes(item.id))
+  if (!originalLookItemIds.value.length) return allItems.value
+  return allItems.value.filter((item) => !originalLookItemIds.value.includes(item.id))
+})
+
+// Reactive display for the look items section while editing
+const editingLookDisplay = computed(() => {
+  const originalIds = new Set(originalLookItemIds.value)
+  const results = []
+
+  // Original items — show with state normal or removed
+  for (const item of lookItems.value) {
+    const stillInEditing = editingItemIds.value.includes(item.id)
+    results.push({
+      ...item,
+      _state: stillInEditing ? 'normal' : 'removed',
+    })
+  }
+
+  // Newly added items (in editingItemIds but not in original)
+  for (const id of editingItemIds.value) {
+    if (!originalIds.has(id)) {
+      const item = allItems.value.find((i) => i.id === id)
+      if (item && !results.find((r) => r.id === id)) {
+        results.push({ ...item, _state: 'added' })
+      }
+    }
+  }
+
+  return results
 })
 const availableItemUrls = computed(() => {
   return availableItems.value.map((item) => {
@@ -45,6 +90,66 @@ const selectedItemIds = ref([])
 const saving = ref(false)
 const allItemUrls = ref([])
 
+// Create sheet pagination + filter
+const createVisibleCount = ref(24)
+const CREATE_PAGE_SIZE = 24
+const createFilter = ref('')
+
+const createFilteredItems = computed(() => {
+  let list = allItems.value
+  if (createFilter.value) {
+    list = list.filter((i) => i.type === createFilter.value)
+  }
+  return list
+})
+
+const createPaginatedItems = computed(() => {
+  return createFilteredItems.value.slice(0, createVisibleCount.value)
+})
+
+const createHasMore = computed(() => {
+  return createVisibleCount.value < createFilteredItems.value.length
+})
+
+// Edit sheet pagination + filter
+const editVisibleCount = ref(24)
+const EDIT_PAGE_SIZE = 24
+const editFilter = ref('')
+
+const editFilteredItems = computed(() => {
+  let list = availableItems.value
+  if (editFilter.value) {
+    list = list.filter((i) => i.type === editFilter.value)
+  }
+  return list
+})
+
+const editPaginatedItems = computed(() => {
+  return editFilteredItems.value.slice(0, editVisibleCount.value)
+})
+
+const editHasMore = computed(() => {
+  return editVisibleCount.value < editFilteredItems.value.length
+})
+
+function loadMoreCreate() {
+  createVisibleCount.value += CREATE_PAGE_SIZE
+}
+
+function toggleCreateFilter(type) {
+  createFilter.value = createFilter.value === type ? '' : type
+  createVisibleCount.value = CREATE_PAGE_SIZE
+}
+
+function loadMoreEdit() {
+  editVisibleCount.value += EDIT_PAGE_SIZE
+}
+
+function toggleEditFilter(type) {
+  editFilter.value = editFilter.value === type ? '' : type
+  editVisibleCount.value = EDIT_PAGE_SIZE
+}
+
 let isActive = true
 
 onMounted(async () => {
@@ -58,6 +163,7 @@ onMounted(async () => {
 onUnmounted(() => {
   isActive = false
   revokeAllUrls()
+  revokeAllItemUrls()
   if (lookPhotoUrl.value) {
     URL.revokeObjectURL(lookPhotoUrl.value)
     lookPhotoUrl.value = null
@@ -107,6 +213,7 @@ function closeSheet() {
   showSheet.value = false
   selectedLook.value = null
   lookItems.value = []
+  originalLookItemIds.value = []
 }
 
 async function handleLookPhotoSelected(event) {
@@ -150,6 +257,7 @@ function toggleItemSelection(itemId) {
 function enterLookEditMode() {
   if (!selectedLook.value) return
   editDescription.value = selectedLook.value.description || ''
+  originalLookItemIds.value = [...(selectedLook.value.itemIds || [])]
   editingItemIds.value = [...(selectedLook.value.itemIds || [])]
   showAddItems.value = false
   isEditingLook.value = true
@@ -159,6 +267,7 @@ function cancelLookEdit() {
   isEditingLook.value = false
   editDescription.value = ''
   editingItemIds.value = []
+  originalLookItemIds.value = []
   showAddItems.value = false
 }
 
@@ -259,6 +368,11 @@ function getItemThumbUrl(itemId) {
   if (idx === -1) return null
   return allItemUrls.value[idx] || null
 }
+
+function getLookItemUrl(itemId) {
+  const idx = lookItems.value.findIndex((i) => i.id === itemId)
+  return idx >= 0 ? itemUrls.value[idx] || null : null
+}
 </script>
 
 <template>
@@ -270,7 +384,7 @@ function getItemThumbUrl(itemId) {
 
     <header class="mt-2 mb-5">
       <h1 class="text-2xl font-bold tracking-tight">Looks</h1>
-      <p class="text-sm text-text-muted mt-0.5">{{ looks.length }} looks</p>
+      <p class="text-sm text-text-muted mt-0.5">{{ filteredLooks.length }} looks</p>
     </header>
 
     <button
@@ -280,9 +394,22 @@ function getItemThumbUrl(itemId) {
       + Criar look
     </button>
 
+    <!-- Search -->
+    <div class="relative mb-4">
+      <input
+        type="search"
+        placeholder="Buscar looks..."
+        class="w-full bg-white/70 rounded-2xl px-4 py-2.5 text-sm text-text-main placeholder:text-text-muted outline-none ring-1 ring-gray-200/50 focus:ring-accent/20 transition-shadow"
+        :value="searchLook"
+        @input="searchLook = $event.target.value"
+      />
+    </div>
+
+    <!-- Loading -->
+    <!-- Loading -->
     <div v-if="loading" class="flex flex-col gap-3">
       <div
-        v-for="n in 3"
+        v-for="n in 5"
         :key="n"
         class="bg-white/50 rounded-3xl p-4 animate-pulse flex items-center justify-between"
       >
@@ -296,9 +423,20 @@ function getItemThumbUrl(itemId) {
       </div>
     </div>
 
+    <!-- Empty: no looks at all -->
+    <div v-else-if="looks.length === 0" class="text-center py-16">
+      <p class="text-text-muted text-sm">Nenhum look ainda</p>
+    </div>
+
+    <!-- Empty: search returned nothing -->
+    <div v-else-if="filteredLooks.length === 0" class="text-center py-16">
+      <p class="text-text-muted text-sm">Nenhum look encontrado</p>
+    </div>
+
+    <!-- Looks list -->
     <TransitionGroup v-else name="list" tag="div" class="flex flex-col gap-3">
       <div
-        v-for="look in looks"
+        v-for="look in filteredLooks"
         :key="look.id"
         class="bg-white rounded-3xl p-4 shadow-soft border border-gray-100 flex items-center justify-between transition-transform active:scale-[0.99] cursor-pointer"
         @click="openLook(look)"
@@ -336,10 +474,6 @@ function getItemThumbUrl(itemId) {
         </div>
       </div>
     </TransitionGroup>
-
-    <div v-if="!loading && looks.length === 0" class="text-center py-16">
-      <p class="text-text-muted text-sm">Nenhum look ainda</p>
-    </div>
 
     <Teleport to="body">
       <Transition name="sheet">
@@ -381,8 +515,8 @@ function getItemThumbUrl(itemId) {
               {{ isEditingLook ? editingItemIds.length : selectedLook?.itemIds?.length || 0 }} peças
             </p>
 
-            <!-- Look photo -->
-            <div class="mb-4">
+            <!-- Look photo (edit mode only) -->
+            <div v-if="isEditingLook" class="mb-4">
               <img
                 v-if="lookPhotoUrl"
                 :src="lookPhotoUrl"
@@ -390,7 +524,7 @@ function getItemThumbUrl(itemId) {
                 class="w-full aspect-[3/4] object-cover rounded-2xl shadow-soft"
               />
               <button
-                class="w-full flex items-center justify-center gap-2 text-sm text-text-muted border-2 border-dashed border-gray-200 rounded-2xl active:scale-[0.97] transition-transform duration-200"
+                class="w-full flex items-center justify-center gap-2 text-sm text-text-muted border-2 border-dashed border-gray-200 rounded-2xl active:scale-95 transition-transform duration-200"
                 :class="lookPhotoUrl ? 'mt-2 py-2 border-gray-200/50' : 'py-3'"
                 :disabled="savingPhoto"
                 @click="lookFileInput?.click()"
@@ -417,35 +551,218 @@ function getItemThumbUrl(itemId) {
                       : 'Adicionar foto vestindo este look'
                 }}
               </button>
-              <input
-                ref="lookFileInput"
-                type="file"
-                accept="image/*"
-                class="hidden"
-                @change="handleLookPhotoSelected"
-              />
             </div>
 
-            <div class="flex gap-3 flex-wrap mb-4">
+            <!-- View mode: Hero Visual + Recipe Grid -->
+            <div v-if="!isEditingLook" class="mb-6">
+              <!-- Hero: photo or polaroid stack -->
+              <img
+                v-if="lookPhotoUrl"
+                :src="lookPhotoUrl"
+                alt="Foto do look"
+                class="w-full aspect-[3/4] object-cover rounded-2xl shadow-soft look-hero"
+              />
               <div
-                v-for="(item, index) in lookItems"
+                v-else
+                class="flex items-center justify-center py-8 select-none look-hero"
+                :class="
+                  lookItems.length >= 4
+                    ? '-space-x-8 sm:-space-x-10'
+                    : lookItems.length === 3
+                      ? '-space-x-6'
+                      : lookItems.length === 2
+                        ? '-space-x-4'
+                        : ''
+                "
+              >
+                <div
+                  v-for="(item, idx) in lookItems.slice(0, 4)"
+                  :key="item.id"
+                  :class="[
+                    'w-24 h-32 sm:w-28 sm:h-36 bg-white p-1 rounded shadow-soft-lg border border-gray-200/60 transform flex-shrink-0 transition-transform',
+                    idx === 0 ? '-rotate-6 z-0' : '',
+                    idx === 1 ? 'rotate-2 z-10' : '',
+                    idx === 2 ? '-rotate-3 z-20 scale-105' : '',
+                    idx === 3 ? 'rotate-6 z-30' : '',
+                  ]"
+                >
+                  <img
+                    v-if="getLookItemUrl(item.id)"
+                    :src="getLookItemUrl(item.id)"
+                    alt=""
+                    class="w-full h-full object-cover rounded-sm"
+                  />
+                  <div
+                    v-else
+                    class="w-full h-full bg-gradient-to-b from-[#F9F9F7] to-[#EDEDE8] rounded-sm flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-8 h-8 text-text-muted/50 stroke-[1.2]"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 3a3 3 0 00-3 3v1m3-4a3 3 0 013 3v1m-3-4v4m0 0L3 13.5a1.5 1.5 0 00.5 2.5h17a1.5 1.5 0 00.5-2.5L12 8z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <!-- Photo upload button -->
+              <button
+                class="w-full flex items-center justify-center gap-2 text-sm text-text-muted border-2 border-dashed border-gray-200 rounded-2xl active:scale-95 transition-transform duration-200"
+                :class="lookPhotoUrl ? 'mt-2 py-2 border-gray-200/50' : 'py-3'"
+                :disabled="savingPhoto"
+                @click="lookFileInput?.click()"
+              >
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                {{
+                  savingPhoto
+                    ? 'Salvando...'
+                    : lookPhotoUrl
+                      ? 'Alterar foto'
+                      : 'Adicionar foto vestindo este look'
+                }}
+              </button>
+
+              <!-- Recipe Grid -->
+              <p class="text-xs font-medium text-text-muted mb-3 mt-6 look-grid-title">
+                peças deste look
+              </p>
+              <div class="grid grid-cols-3 gap-2 look-grid">
+                <router-link
+                  v-for="(item, index) in lookItems"
+                  :key="item.id"
+                  :to="`/item/${item.id}`"
+                  class="rounded-2xl shadow-soft overflow-hidden bg-white active:scale-95 transition-transform duration-200 ease-out"
+                >
+                  <div class="aspect-[3/4] bg-gray-100 relative overflow-hidden">
+                    <img
+                      v-if="getItemUrl(index)"
+                      :src="getItemUrl(index)"
+                      :alt="item.description || 'Peça'"
+                      class="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <div
+                      v-else
+                      class="w-full h-full bg-gradient-to-b from-[#F9F9F7] to-[#EDEDE8] flex flex-col items-center justify-center p-4 select-none"
+                    >
+                      <svg
+                        class="w-10 h-10 text-text-muted/70 stroke-[1.2]"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M12 3a3 3 0 00-3 3v1m3-4a3 3 0 013 3v1m-3-4v4m0 0L3 13.5a1.5 1.5 0 00.5 2.5h17a1.5 1.5 0 00.5-2.5L12 8z"
+                        />
+                      </svg>
+                      <span
+                        class="text-[10px] font-bold uppercase tracking-widest text-text-muted/60 mt-3"
+                        >Sem Peça</span
+                      >
+                    </div>
+                  </div>
+                  <div class="p-2.5">
+                    <p class="text-xs text-text-main font-medium truncate">
+                      {{ item.description || 'Sem descrição' }}
+                    </p>
+                    <p class="text-[10px] text-text-muted uppercase tracking-wider mt-0.5">
+                      {{ labelForType(item.type) }}
+                    </p>
+                  </div>
+                </router-link>
+              </div>
+            </div>
+
+            <!-- File input (shared) -->
+            <input
+              ref="lookFileInput"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="handleLookPhotoSelected"
+            />
+
+            <!-- Edit mode: reactive display with states -->
+            <div v-if="isEditingLook" class="flex gap-3 flex-wrap mb-4">
+              <div
+                v-for="item in editingLookDisplay"
                 :key="item.id"
-                class="w-20 rounded-xl overflow-hidden bg-gray-50 relative"
-                :class="isEditingLook ? '' : 'cursor-pointer'"
-                @click="isEditingLook ? null : router.push(`/item/${item.id}`)"
+                class="w-20 rounded-xl overflow-hidden bg-gray-50 relative transition-all duration-300"
+                :class="{
+                  'opacity-40 ring-2 ring-red-300 ring-inset': item._state === 'removed',
+                  'ring-2 ring-accent ring-inset': item._state === 'added',
+                  'ring-0': item._state === 'normal',
+                }"
               >
                 <div class="aspect-[3/4] bg-gray-100">
                   <img
-                    v-if="getItemUrl(index)"
-                    :src="getItemUrl(index)"
+                    v-if="getItemThumbUrl(item.id)"
+                    :src="getItemThumbUrl(item.id)"
                     :alt="item.description"
                     class="w-full h-full object-cover"
                   />
                 </div>
-                <p class="text-[10px] p-1 truncate text-text-muted">{{ item.type }}</p>
-                <!-- Remove overlay in edit mode -->
+                <p class="text-[10px] p-1 truncate text-text-muted">
+                  {{ labelForType(item.type) }}
+                </p>
+
+                <!-- Removed: re-add overlay -->
                 <div
-                  v-if="isEditingLook"
+                  v-if="item._state === 'removed'"
+                  class="absolute inset-0 flex items-center justify-center rounded-xl active:scale-95 transition-transform cursor-pointer"
+                  @click.stop="toggleAddItem(item.id)"
+                >
+                  <span
+                    class="text-[10px] font-bold text-red-500 bg-white/80 px-1.5 py-0.5 rounded"
+                  >
+                    Removida
+                  </span>
+                </div>
+                <!-- Added: check overlay — click to remove -->
+                <div
+                  v-else-if="item._state === 'added'"
+                  class="absolute top-1 right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
+                  @click.stop="toggleAddItem(item.id)"
+                >
+                  <svg
+                    class="w-3 h-3 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="3"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+                <!-- Normal: remove overlay -->
+                <div
+                  v-else
                   class="absolute inset-0 bg-black/30 flex items-center justify-center rounded-xl active:scale-95 transition-transform cursor-pointer"
                   @click.stop="removeLookItem(item.id)"
                 >
@@ -476,15 +793,50 @@ function getItemThumbUrl(itemId) {
               </button>
               <div v-if="showAddItems">
                 <p class="text-xs text-text-muted mb-2">Peças disponíveis</p>
+
+                <!-- Edit sheet filter pills -->
                 <div
-                  v-if="availableItems.length === 0"
+                  v-if="availableItems.length > 0"
+                  class="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-none"
+                >
+                  <button
+                    class="shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider transition-all duration-200 active:scale-95"
+                    :class="
+                      editFilter === ''
+                        ? 'text-white bg-accent rounded-lg font-bold'
+                        : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
+                    "
+                    @click="
+                      editFilter = ''
+                      editVisibleCount = EDIT_PAGE_SIZE
+                    "
+                  >
+                    Todas
+                  </button>
+                  <button
+                    v-for="type in ITEM_TYPES"
+                    :key="type"
+                    class="shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider transition-all duration-200 active:scale-95"
+                    :class="
+                      editFilter === type
+                        ? 'text-white bg-accent rounded-lg font-bold'
+                        : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
+                    "
+                    @click="toggleEditFilter(type)"
+                  >
+                    {{ labelForType(type) }}
+                  </button>
+                </div>
+
+                <div
+                  v-if="editFilteredItems.length === 0"
                   class="text-center py-4 text-text-muted text-xs"
                 >
-                  Todas as peças já estão neste look
+                  Nenhuma peça disponível para adicionar
                 </div>
                 <div v-else class="grid grid-cols-3 gap-2">
                   <div
-                    v-for="(item, index) in availableItems"
+                    v-for="item in editPaginatedItems"
                     :key="item.id"
                     class="rounded-lg overflow-hidden bg-gray-50 ring-2 transition-all duration-200 cursor-pointer active:scale-95"
                     :class="
@@ -496,15 +848,27 @@ function getItemThumbUrl(itemId) {
                   >
                     <div class="aspect-[3/4] bg-gray-100">
                       <img
-                        v-if="availableItemUrls[index]"
-                        :src="availableItemUrls[index]"
+                        v-if="getItemThumbUrl(item.id)"
+                        :src="getItemThumbUrl(item.id)"
                         :alt="item.description"
                         class="w-full h-full object-cover"
                       />
                     </div>
-                    <p class="text-[10px] p-1 truncate text-text-muted">{{ item.type }}</p>
+                    <p class="text-[10px] p-1 truncate text-text-muted">
+                      {{ labelForType(item.type) }}
+                    </p>
                   </div>
                 </div>
+
+                <!-- Edit sheet load more -->
+                <button
+                  v-if="editHasMore"
+                  class="w-full mt-3 py-2 text-xs text-text-muted font-medium rounded-2xl ring-1 ring-gray-200 bg-white/80 active:scale-[0.97] transition-transform duration-200"
+                  @click="loadMoreEdit"
+                >
+                  Ver mais
+                  {{ Math.min(EDIT_PAGE_SIZE, editFilteredItems.length - editVisibleCount) }} peças
+                </button>
               </div>
             </div>
 
@@ -567,9 +931,53 @@ function getItemThumbUrl(itemId) {
               Nenhuma peça disponível. Adicione peças primeiro.
             </div>
 
-            <div v-else class="grid grid-cols-3 gap-2 mb-5">
+            <!-- Create sheet filter pills -->
+            <div
+              v-if="allItems.length > 0"
+              class="flex gap-2 overflow-x-auto pb-3 mb-3 scrollbar-none"
+            >
+              <button
+                class="shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider transition-all duration-200 active:scale-95"
+                :class="
+                  createFilter === ''
+                    ? 'text-white bg-accent rounded-lg font-bold'
+                    : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
+                "
+                @click="
+                  createFilter = ''
+                  createVisibleCount = CREATE_PAGE_SIZE
+                "
+              >
+                Todas
+              </button>
+              <button
+                v-for="type in ITEM_TYPES"
+                :key="type"
+                class="shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider transition-all duration-200 active:scale-95"
+                :class="
+                  createFilter === type
+                    ? 'text-white bg-accent rounded-lg font-bold'
+                    : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
+                "
+                @click="toggleCreateFilter(type)"
+              >
+                {{ labelForType(type) }}
+              </button>
+              <span class="shrink-0 text-[10px] text-text-muted self-center ml-auto">
+                {{ createFilteredItems.length }} peças
+              </span>
+            </div>
+
+            <div
+              v-if="createFilteredItems.length === 0"
+              class="text-center py-4 text-text-muted text-sm"
+            >
+              Nenhuma peça encontrada
+            </div>
+
+            <div v-else class="grid grid-cols-3 gap-2 mb-3">
               <div
-                v-for="(item, index) in allItems"
+                v-for="item in createPaginatedItems"
                 :key="item.id"
                 class="rounded-xl overflow-hidden bg-gray-50 ring-2 transition-all duration-200 cursor-pointer active:scale-95"
                 :class="
@@ -581,15 +989,30 @@ function getItemThumbUrl(itemId) {
               >
                 <div class="aspect-[3/4] bg-gray-100">
                   <img
-                    v-if="allItemUrls[index]"
-                    :src="allItemUrls[index]"
+                    v-if="getItemThumbUrl(item.id)"
+                    :src="getItemThumbUrl(item.id)"
                     :alt="item.description"
                     class="w-full h-full object-cover"
                   />
                 </div>
-                <p class="text-[10px] p-1 truncate text-text-muted">{{ item.type }}</p>
+                <p class="text-[10px] p-1 truncate text-text-muted">
+                  {{ labelForType(item.type) }}
+                </p>
               </div>
             </div>
+
+            <!-- Create sheet load more -->
+            <button
+              v-if="createHasMore"
+              class="w-full mb-4 py-2 text-xs text-text-muted font-medium rounded-2xl ring-1 ring-gray-200 bg-white/80 active:scale-[0.97] transition-transform duration-200"
+              @click="loadMoreCreate"
+            >
+              Ver mais
+              {{
+                Math.min(CREATE_PAGE_SIZE, createFilteredItems.length - createVisibleCount)
+              }}
+              peças
+            </button>
 
             <button
               class="w-full py-2.5 bg-accent text-white text-sm font-medium rounded-2xl active:scale-[0.97] transition-transform duration-200 disabled:opacity-50"
@@ -616,5 +1039,79 @@ function getItemThumbUrl(itemId) {
 .sheet-leave-to {
   transform: translateY(100%);
   opacity: 0;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.drawer-grid > * {
+  content-visibility: auto;
+  contain-intrinsic-size: 320px;
+}
+
+/* ─── Hero + Grid entrance animation ─────────────────────────── */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.look-hero {
+  animation: fadeInUp 0.5s ease-out 0.05s both;
+}
+
+.look-grid-title {
+  animation: fadeInUp 0.4s ease-out 0.1s both;
+}
+
+.look-grid {
+  content-visibility: auto;
+  contain-intrinsic-size: 160px;
+}
+
+.look-grid > * {
+  animation: fadeInUp 0.4s ease-out both;
+}
+
+.look-grid > *:nth-child(1) {
+  animation-delay: 0.15s;
+}
+.look-grid > *:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.look-grid > *:nth-child(3) {
+  animation-delay: 0.25s;
+}
+.look-grid > *:nth-child(4) {
+  animation-delay: 0.3s;
+}
+.look-grid > *:nth-child(5) {
+  animation-delay: 0.35s;
+}
+.look-grid > *:nth-child(6) {
+  animation-delay: 0.4s;
+}
+.look-grid > *:nth-child(n + 7) {
+  animation-delay: 0.45s;
+}
+
+/* router-link reset — card should look like a div */
+.look-grid a,
+.look-grid a:visited,
+.look-grid a:hover {
+  text-decoration: none;
+  color: inherit;
+  display: block;
 }
 </style>
