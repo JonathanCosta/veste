@@ -8,6 +8,7 @@ export default {
         accent: '#2D2D2D',
         'text-main': '#1F2937',
         'text-muted': '#6B7280',
+        'studio-bg': '#121211',
       },
       boxShadow: {
         soft: '0 8px 30px rgba(0,0,0,0.04)',
