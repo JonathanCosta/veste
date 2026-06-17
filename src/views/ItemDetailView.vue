@@ -251,6 +251,11 @@ async function confirmCrop() {
   }
 }
 
+function onCropImageError() {
+  dialog.alert('Falha ao carregar a imagem.')
+  cancelCrop()
+}
+
 function rotateImage(deg) {
   const imageEl = cropperInstance?.getCropperImage()
   if (imageEl) imageEl.$rotate(`${deg}deg`)
@@ -622,10 +627,7 @@ async function handleDelete() {
               v-if="cropImageUrl"
               :src="cropImageUrl"
               class="block max-w-full max-h-full opacity-0"
-              @error="
-                dialog.alert('Falha ao carregar a imagem.')
-                cancelCrop()
-              "
+              @error="onCropImageError"
             />
           </div>
 
