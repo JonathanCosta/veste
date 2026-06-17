@@ -9,6 +9,8 @@ const router = useRouter()
 const { items, loading, loadItems } = useItems()
 const search = ref('')
 const activeFilter = ref('')
+const visibleCount = ref(20)
+const PAGE_SIZE = 20
 
 const filteredItems = computed(() => {
   let list = items.value
@@ -21,6 +23,34 @@ const filteredItems = computed(() => {
   }
   return list
 })
+
+const paginatedItems = computed(() => {
+  return filteredItems.value.slice(0, visibleCount.value)
+})
+
+const hasMore = computed(() => {
+  return visibleCount.value < filteredItems.value.length
+})
+
+function loadMore() {
+  visibleCount.value += PAGE_SIZE
+}
+
+// Reset pagination when filter or search changes
+function resetFilter() {
+  activeFilter.value = ''
+  visibleCount.value = PAGE_SIZE
+}
+
+function toggleFilter(type) {
+  activeFilter.value = activeFilter.value === type ? '' : type
+  visibleCount.value = PAGE_SIZE
+}
+
+function handleSearchInput(val) {
+  search.value = val
+  visibleCount.value = PAGE_SIZE
+}
 
 onMounted(loadItems)
 </script>
@@ -39,10 +69,11 @@ onMounted(loadItems)
 
     <div class="relative mb-4">
       <input
-        v-model="search"
         type="search"
         placeholder="Buscar peças..."
         class="w-full bg-white/70 rounded-2xl px-4 py-2.5 text-sm text-text-main placeholder:text-text-muted outline-none ring-1 ring-gray-200/50 focus:ring-accent/20 transition-shadow"
+        :value="search"
+        @input="handleSearchInput($event.target.value)"
       />
     </div>
 
@@ -54,7 +85,7 @@ onMounted(loadItems)
             ? 'text-white bg-accent rounded-lg shadow-[0_6px_20px_rgba(45,45,45,0.25)] border border-accent font-bold'
             : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
         "
-        @click="activeFilter = ''"
+        @click="resetFilter()"
       >
         Todas
       </button>
@@ -67,7 +98,7 @@ onMounted(loadItems)
             ? 'text-white bg-accent rounded-lg shadow-[0_6px_20px_rgba(45,45,45,0.25)] border border-accent font-bold'
             : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
         "
-        @click="activeFilter = activeFilter === type ? '' : type"
+        @click="toggleFilter(type)"
       >
         {{
           type === 'top'
@@ -116,10 +147,24 @@ onMounted(loadItems)
       <!-- Decorative slit simulating the drawer slide groove -->
       <div class="w-full h-[1px] bg-gray-200/80 mb-6 shadow-[0_1px_0_rgba(255,255,255,0.9)]"></div>
       <TransitionGroup name="list" tag="div" class="grid grid-cols-2 gap-3">
-        <div v-for="item in filteredItems" :key="item.id" @click="router.push(`/item/${item.id}`)">
+        <div
+          v-for="(item, index) in paginatedItems"
+          :key="item.id"
+          :style="{ '--index': index }"
+          @click="router.push(`/item/${item.id}`)"
+        >
           <ItemCard :item="item" />
         </div>
       </TransitionGroup>
+
+      <!-- Load more button -->
+      <button
+        v-if="hasMore"
+        class="w-full mt-4 py-3 text-sm text-text-muted font-medium rounded-2xl ring-1 ring-gray-200 bg-white/80 active:scale-[0.97] transition-transform duration-200"
+        @click="loadMore"
+      >
+        Ver mais {{ Math.min(PAGE_SIZE, filteredItems.length - visibleCount) }} peças
+      </button>
     </div>
   </div>
 </template>
@@ -131,5 +176,9 @@ onMounted(loadItems)
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.list-enter-active {
+  transition-delay: calc(var(--index, 0) * 30ms);
 }
 </style>

@@ -28,6 +28,12 @@ vi.mock('../composables/useDialog', () => ({
   }),
 }))
 
+// Mock backupService for SettingsView tests (Worker-dependent)
+vi.mock('../services/backupService', () => ({
+  exportBackup: vi.fn(() => Promise.resolve()),
+  importBackup: vi.fn(() => Promise.reject(new Error('Falha ao importar'))),
+}))
+
 /**
  * Create a router for testing views.
  */

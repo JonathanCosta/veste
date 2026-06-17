@@ -1,8 +1,10 @@
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
+import { useWorkingState } from '../composables/useWorkingState'
 
 const router = useRouter()
 const route = useRoute()
+const { isWorking } = useWorkingState()
 
 function isActive(path) {
   if (path === '/') return route.path === '/'
@@ -16,7 +18,8 @@ function isActive(path) {
   >
     <!-- Peças -->
     <button
-      class="flex flex-col items-center gap-1 transition-transform duration-200 ease-out active:scale-95 group"
+      class="flex flex-col items-center gap-1 transition-all duration-200 ease-out active:scale-95 group"
+      :class="{ 'pointer-events-none opacity-40': isWorking }"
       @click="router.push('/')"
     >
       <svg
@@ -42,7 +45,8 @@ function isActive(path) {
 
     <!-- Novo (FAB) -->
     <button
-      class="flex flex-col items-center gap-1 transition-transform duration-200 ease-out active:scale-95 group relative -top-2"
+      class="flex flex-col items-center gap-1 transition-all duration-200 ease-out active:scale-95 group relative -top-2"
+      :class="{ 'pointer-events-none opacity-40': isWorking }"
       @click="router.push('/item/new')"
     >
       <div
@@ -62,7 +66,8 @@ function isActive(path) {
 
     <!-- Looks -->
     <button
-      class="flex flex-col items-center gap-1 transition-transform duration-200 ease-out active:scale-95 group"
+      class="flex flex-col items-center gap-1 transition-all duration-200 ease-out active:scale-95 group"
+      :class="{ 'pointer-events-none opacity-40': isWorking }"
       @click="router.push('/looks')"
     >
       <svg
@@ -93,7 +98,8 @@ function isActive(path) {
 
     <!-- Config -->
     <button
-      class="flex flex-col items-center gap-1 transition-transform duration-200 ease-out active:scale-95 group"
+      class="flex flex-col items-center gap-1 transition-all duration-200 ease-out active:scale-95 group"
+      :class="{ 'pointer-events-none opacity-40': isWorking }"
       @click="router.push('/settings')"
     >
       <svg

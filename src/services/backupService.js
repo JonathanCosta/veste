@@ -1,119 +1,236 @@
-import JSZip from 'jszip'
+/**
+ * Backup service — orchestrates export/import via a Web Worker.
+ *
+ * The worker handles all JSZip compression/decompression off the main thread.
+ * Items are read from Dexie in chunks (50 at a time) to keep heap pressure low.
+ * Metadata (data.json) is built on the main thread and sent as a final string.
+ */
 import FileSaver from 'file-saver'
 const { saveAs } = FileSaver
 import db from '../database/db'
 
+const CHUNK_SIZE = 50
 const MAX_ZIP_SIZE = 50 * 1024 * 1024 // 50 MB
 
-export async function exportBackup() {
-  const items = await db.items.toArray()
-  const categories = await db.categories.toArray()
-  const looks = await db.looks.toArray()
+// ─── Export ────────────────────────────────────────────────────────
 
-  const zip = new JSZip()
+/**
+ * Export all data to a .zip file.
+ *
+ * @param {object} [options]
+ * @param {(progress: { phase: string, current: number, total: number }) => void} [options.onProgress]
+ * @param {AbortSignal} [options.signal]
+ * @returns {Promise<void>}
+ */
+export async function exportBackup(options = {}) {
+  const { onProgress, signal } = options
 
-  const data = { items: [], categories, looks }
+  const totalItems = await db.items.count()
+  const totalLooks = await db.looks.count()
 
-  for (const item of items) {
-    const { imageBlob, ...rest } = item
-    data.items.push(rest)
-    if (imageBlob) {
-      zip.file(`images/item_${item.id}.webp`, imageBlob)
-    }
+  if (totalItems === 0 && totalLooks === 0) {
+    throw new Error('Nenhum dado para exportar.')
   }
 
-  for (const look of looks) {
-    if (look.imageBlob) {
-      zip.file(`images/look_${look.id}.webp`, look.imageBlob)
-      const { imageBlob, ...rest } = look
-      data.looks = data.looks.map((l) => (l.id === look.id ? rest : l))
-    }
-  }
+  const worker = new Worker(new URL('../workers/backup.worker.js', import.meta.url), {
+    type: 'module',
+  })
 
-  zip.file('data.json', JSON.stringify(data, null, 2))
-  const blob = await zip.generateAsync({ type: 'blob' })
-  saveAs(blob, `backup-veste-${Date.now()}.zip`)
+  await new Promise((resolve, reject) => {
+    const cleanup = () => {
+      worker.terminate()
+      if (signal) {
+        try {
+          signal.removeEventListener('abort', onAbort)
+        } catch {}
+      }
+    }
+
+    const onAbort = () => {
+      worker.postMessage({ type: 'ABORT' })
+      worker.terminate()
+      reject(new DOMException('Exportação cancelada.', 'AbortError'))
+    }
+
+    if (signal) {
+      if (signal.aborted) {
+        worker.terminate()
+        return reject(new DOMException('Exportação cancelada.', 'AbortError'))
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+
+    worker.onmessage = (e) => {
+      const msg = e.data
+
+      switch (msg.type) {
+        case 'PROGRESS':
+          onProgress?.(msg)
+          break
+
+        case 'SUCCESS': {
+          saveAs(msg.blob, `backup-veste-${Date.now()}.zip`)
+          cleanup()
+          resolve()
+          break
+        }
+
+        case 'ERROR':
+          cleanup()
+          reject(new Error(msg.error))
+          break
+      }
+    }
+
+    worker.onerror = (err) => {
+      cleanup()
+      reject(new Error(err.message || 'Erro no worker de exportação'))
+    }
+
+    // ── Kick off the export ──────────────────────────────
+    ;(async () => {
+      try {
+        worker.postMessage({ type: 'EXPORT_START' })
+
+        // Read items in chunks
+        let itemsOffset = 0
+        while (itemsOffset < totalItems) {
+          if (signal?.aborted) {
+            worker.postMessage({ type: 'ABORT' })
+            worker.terminate()
+            return
+          }
+          const chunk = await db.items.offset(itemsOffset).limit(CHUNK_SIZE).toArray()
+
+          worker.postMessage({ type: 'EXPORT_CHUNK', items: chunk, looks: [] })
+          itemsOffset += chunk.length
+
+          onProgress?.({
+            phase: 'items',
+            current: Math.min(itemsOffset, totalItems),
+            total: totalItems,
+          })
+        }
+
+        // Read looks in chunks
+        let looksOffset = 0
+        while (looksOffset < totalLooks) {
+          if (signal?.aborted) {
+            worker.postMessage({ type: 'ABORT' })
+            worker.terminate()
+            return
+          }
+          const chunk = await db.looks.offset(looksOffset).limit(CHUNK_SIZE).toArray()
+
+          worker.postMessage({ type: 'EXPORT_CHUNK', items: [], looks: chunk })
+          looksOffset += chunk.length
+
+          onProgress?.({
+            phase: 'looks',
+            current: Math.min(looksOffset, totalLooks),
+            total: totalLooks,
+          })
+        }
+
+        // Build metadata JSON on main thread (no Blobs)
+        const allItems = await db.items.toArray()
+        const allCategories = await db.categories.toArray()
+        const allLooks = await db.looks.toArray()
+
+        // Strip Blobs from data before serialization
+        const data = {
+          items: allItems.map(({ imageBlob, ...rest }) => rest),
+          categories: allCategories,
+          looks: allLooks.map(({ imageBlob, ...rest }) => rest),
+        }
+        const dataJson = JSON.stringify(data, null, 2)
+
+        onProgress?.({ phase: 'compressing', current: 0, total: 0 })
+        worker.postMessage({ type: 'EXPORT_FINALIZE', dataJson })
+      } catch (err) {
+        worker.postMessage({ type: 'ABORT' })
+        worker.terminate()
+        reject(err)
+      }
+    })()
+  })
 }
 
-function isValidId(value) {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0
-}
+// ─── Import ────────────────────────────────────────────────────────
 
-function validateBackupData(data) {
-  if (!data || typeof data !== 'object') {
-    throw new Error('Invalid backup: data must be an object')
-  }
-  if (!Array.isArray(data.items)) {
-    throw new Error('Invalid backup: items must be an array')
-  }
-  if (!Array.isArray(data.categories)) {
-    throw new Error('Invalid backup: categories must be an array')
-  }
-  if (!Array.isArray(data.looks)) {
-    throw new Error('Invalid backup: looks must be an array')
-  }
-  for (const item of data.items) {
-    if (!isValidId(item.id)) {
-      throw new Error('Invalid backup: item id must be a positive integer')
-    }
-  }
-  for (const look of data.looks) {
-    if (!isValidId(look.id)) {
-      throw new Error('Invalid backup: look id must be a positive integer')
-    }
-  }
-}
-
+/**
+ * Import data from a .zip backup file.
+ *
+ * @param {File} file - The .zip file selected by the user
+ * @returns {Promise<void>}
+ */
 export async function importBackup(file) {
   if (file.size > MAX_ZIP_SIZE) {
-    throw new Error(`File too large (max ${MAX_ZIP_SIZE / 1024 / 1024} MB)`)
+    throw new Error(`Arquivo muito grande (máx ${MAX_ZIP_SIZE / 1024 / 1024} MB)`)
   }
 
-  const zip = await JSZip.loadAsync(file)
-  const dataFile = zip.file('data.json')
-  if (!dataFile) throw new Error('data.json not found in backup')
+  const worker = new Worker(new URL('../workers/backup.worker.js', import.meta.url), {
+    type: 'module',
+  })
 
-  const raw = await dataFile.async('text')
-  let data
-  try {
-    data = JSON.parse(raw)
-  } catch {
-    throw new Error('Invalid backup: data.json is not valid JSON')
-  }
+  await new Promise((resolve, reject) => {
+    const cleanup = () => worker.terminate()
 
-  validateBackupData(data)
+    worker.onmessage = async (e) => {
+      const msg = e.data
 
-  await db.transaction('rw', db.items, db.categories, db.looks, async () => {
-    await db.items.clear()
-    await db.categories.clear()
-    await db.looks.clear()
+      switch (msg.type) {
+        case 'PROGRESS':
+          break
 
-    for (const item of data.items) {
-      const imgFile = zip.file(`images/item_${item.id}.webp`)
-      let blob
-      if (imgFile) {
-        const rawBlob = await imgFile.async('blob')
-        if (rawBlob.type === '' || rawBlob.type === 'image/webp') {
-          blob = rawBlob
+        case 'SUCCESS_IMPORT': {
+          try {
+            await db.transaction('rw', db.items, db.categories, db.looks, async () => {
+              await db.items.clear()
+              await db.categories.clear()
+              await db.looks.clear()
+
+              for (const item of msg.items || []) {
+                await db.items.put(item)
+              }
+              for (const cat of msg.categories || []) {
+                await db.categories.put(cat)
+              }
+              for (const look of msg.looks || []) {
+                await db.looks.put(look)
+              }
+            })
+            cleanup()
+            resolve()
+          } catch (err) {
+            cleanup()
+            reject(new Error(`Erro ao restaurar dados: ${err.message}`))
+          }
+          break
         }
+
+        case 'ERROR':
+          cleanup()
+          reject(new Error(msg.error))
+          break
       }
-      await db.items.put({ ...item, imageBlob: blob })
     }
 
-    for (const cat of data.categories) {
-      await db.categories.put(cat)
+    worker.onerror = (err) => {
+      cleanup()
+      reject(new Error(err.message || 'Erro no worker de importação'))
     }
 
-    for (const look of data.looks) {
-      const imgFile = zip.file(`images/look_${look.id}.webp`)
-      let blob
-      if (imgFile) {
-        const rawBlob = await imgFile.async('blob')
-        if (rawBlob.type === '' || rawBlob.type === 'image/webp') {
-          blob = rawBlob
-        }
-      }
-      await db.looks.put({ ...look, imageBlob: blob })
-    }
+    // Read the file and send to worker
+    file
+      .arrayBuffer()
+      .then((buffer) => {
+        const blob = new Blob([buffer], { type: file.type || 'application/zip' })
+        worker.postMessage({ type: 'IMPORT_START', zipBlob: blob }, [blob])
+      })
+      .catch((err) => {
+        cleanup()
+        reject(new Error(`Erro ao ler arquivo: ${err.message}`))
+      })
   })
 }
