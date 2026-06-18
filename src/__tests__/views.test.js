@@ -509,6 +509,38 @@ describe('CalendarView.vue', () => {
     })
   })
 
+  it('shows dot indicators when look-type logs exist', async () => {
+    // Create items and a look
+    const itemId = await db.items.add({
+      type: 'top',
+      description: 'Camisa',
+      createdAt: Date.now(),
+    })
+    const lookId = await db.looks.add({
+      description: 'Look do Dia',
+      itemIds: [itemId],
+      createdAt: Date.now(),
+    })
+    const today = new Date().toISOString().slice(0, 10)
+    await db.calendar_logs.add({
+      date: today,
+      entityType: 'look',
+      entityId: lookId,
+      order: 0,
+    })
+
+    const View = (await import('../views/CalendarView.vue')).default
+    const { wrapper } = await mountView(View, '/calendar')
+
+    await vi.waitFor(() => {
+      // Should NOT show empty state because look logs exist
+      expect(wrapper.text()).not.toContain('Nenhum look registrado neste mês')
+      // Should show day cells
+      const todayNum = new Date().getDate().toString()
+      expect(wrapper.text()).toContain(todayNum)
+    })
+  })
+
   it('navigates to previous and next month', async () => {
     const View = (await import('../views/CalendarView.vue')).default
     const { wrapper } = await mountView(View, '/calendar')
