@@ -14,9 +14,11 @@ function isActive(path) {
 
 <template>
   <nav
-    class="fixed bottom-0 left-0 right-0 z-40 w-full bg-white border-t border-neutral-100 shadow-soft pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+    class="fixed bottom-0 left-0 right-0 z-50 w-full bg-transparent pb-0 drop-shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
   >
-    <div class="grid grid-cols-5 items-center h-16">
+    <div
+      class="grid grid-cols-5 items-center h-16 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+    >
       <!-- Peças (1) -->
       <button
         class="flex flex-col items-center justify-center gap-1 h-full py-2 transition-all duration-200 ease-out active:scale-95 group"
@@ -79,7 +81,7 @@ function isActive(path) {
       <!-- Novo — FAB (3, central) -->
       <div class="relative flex justify-center h-full">
         <button
-          class="absolute -top-5 left-1/2 -translate-x-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-accent text-white shadow-soft-lg border-4 border-white transition-all duration-200 ease-out active:scale-95 group z-50"
+          class="absolute -top-5 left-1/2 -translate-x-1/2 w-14 h-14 flex items-center justify-center rounded-full bg-neutral-800 text-white border-[5px] border-white box-content transition-all duration-200 ease-out active:scale-95 group z-50"
           :class="{ 'pointer-events-none opacity-40': isWorking }"
           @click="router.push('/item/new')"
         >
