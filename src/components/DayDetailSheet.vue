@@ -221,9 +221,9 @@ watch(
       <!-- Pull handle -->
       <div class="w-full flex justify-center pt-3 pb-5 cursor-grab active:cursor-grabbing">
         <div
-          class="w-14 h-3.5 bg-accent rounded-full shadow-[0_3px_6px_rgba(0,0,0,0.2),inset_0_-2px_3px_rgba(0,0,0,0.4)] border border-neutral-700 relative flex items-center justify-center"
+          class="w-14 h-2.5 bg-accent rounded-full shadow-[0_3px_6px_rgba(0,0,0,0.2),inset_0_-2px_3px_rgba(0,0,0,0.4)] border border-white/10 relative flex items-center justify-center"
         >
-          <div class="w-1 h-1 bg-neutral-400 rounded-full shadow-inner" />
+          <div class="w-1.5 h-1.5 rounded-full bg-white/40 shadow-inner" />
         </div>
       </div>
 
