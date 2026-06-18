@@ -207,7 +207,7 @@ onUnmounted(() => {
     <!-- Drawer Front Container — initial loading skeleton -->
     <template v-if="loading">
       <div
-        class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(255,255,255,0.8)] border-t border-gray-200/60 mt-4 min-h-[70vh]"
+        class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(0,0,0,0.03)] border-t-2 border-l-2 border-white/80 border-b-2 border-r-2 border-gray-300/60 mt-4 min-h-[70vh]"
       >
         <div class="grid grid-cols-2 gap-4 animate-pulse">
           <div v-for="n in 6" :key="n" class="flex flex-col gap-2">
@@ -221,7 +221,7 @@ onUnmounted(() => {
 
     <template v-else-if="filteredItems.length === 0">
       <div
-        class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(255,255,255,0.8)] border-t border-gray-200/60 mt-4 min-h-[70vh]"
+        class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(0,0,0,0.03)] border-t-2 border-l-2 border-white/80 border-b-2 border-r-2 border-gray-300/60 mt-4 min-h-[70vh]"
       >
         <div class="text-center py-16">
           <p class="text-text-muted text-sm">Nenhuma peça encontrada</p>
@@ -232,7 +232,7 @@ onUnmounted(() => {
     <!-- Drawer container — simulates an open drawer with recessed depth -->
     <div
       v-else
-      class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(255,255,255,0.8)] border-t border-gray-200/60 mt-4 min-h-[70vh]"
+      class="bg-[#FCFCFA] rounded-t-[2.5rem] p-5 shadow-[0_-12px_30px_rgba(0,0,0,0.03),inset_0_2px_4px_rgba(0,0,0,0.03)] border-t-2 border-l-2 border-white/80 border-b-2 border-r-2 border-gray-300/60 mt-4 min-h-[70vh]"
     >
       <!-- Decorative slit simulating the drawer slide groove -->
       <div class="w-full h-[1px] bg-gray-200/80 mb-6 shadow-[0_1px_0_rgba(255,255,255,0.9)]"></div>
