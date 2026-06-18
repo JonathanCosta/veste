@@ -8,7 +8,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/__tests__/setup.js'],
     // Run files sequentially — all share the same IndexedDB instance
-    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**', '**/.opencode/**'],
     fileParallelism: false,
   },
 })
