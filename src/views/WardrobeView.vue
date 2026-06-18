@@ -153,7 +153,7 @@ onUnmounted(() => {
         class="shrink-0 px-4 py-2 text-xs font-medium uppercase tracking-wider transition-all duration-200 active:scale-95"
         :class="
           activeFilter === ''
-            ? 'text-white bg-accent rounded-lg shadow-[0_6px_20px_rgba(45,45,45,0.25)] border border-accent font-bold'
+            ? 'text-white bg-accent rounded-lg shadow-soft border border-accent font-bold'
             : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
         "
         @click="resetFilter()"
@@ -167,7 +167,7 @@ onUnmounted(() => {
         class="shrink-0 px-4 py-2 text-xs font-medium uppercase tracking-wider transition-all duration-200 active:scale-95"
         :class="
           activeFilter === type
-            ? 'text-white bg-accent rounded-lg shadow-[0_6px_20px_rgba(45,45,45,0.25)] border border-accent font-bold'
+            ? 'text-white bg-accent rounded-lg shadow-soft border border-accent font-bold'
             : 'text-text-muted bg-white border border-dashed border-gray-300 rounded-lg'
         "
         @click="toggleFilter(type)"
