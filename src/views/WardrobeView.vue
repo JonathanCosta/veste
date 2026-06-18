@@ -10,6 +10,7 @@ const router = useRouter()
 const { items, loading, loadItems } = useItems()
 const search = ref('')
 const activeFilter = ref('')
+const corFiltroAtivo = ref('')
 const visibleCount = ref(20)
 const PAGE_SIZE = 20
 const isLoadingMore = ref(false)
@@ -22,6 +23,9 @@ const filteredItems = computed(() => {
   let list = items.value
   if (activeFilter.value) {
     list = list.filter((i) => i.type === activeFilter.value)
+  }
+  if (corFiltroAtivo.value) {
+    list = list.filter((i) => i.cor === corFiltroAtivo.value)
   }
   if (search.value) {
     const q = search.value.toLowerCase()
@@ -37,6 +41,15 @@ const categoryCounts = computed(() => {
     if (counts[item.type] !== undefined) counts[item.type]++
   }
   return counts
+})
+
+const itemsFiltradosPorTipo = computed(() => {
+  if (!activeFilter.value) return items.value
+  return items.value.filter((i) => i.type === activeFilter.value)
+})
+
+const coresEmUso = computed(() => {
+  return [...new Set(itemsFiltradosPorTipo.value.map((p) => p.cor).filter(Boolean))]
 })
 
 const paginatedItems = computed(() => {
@@ -65,6 +78,12 @@ function resetFilter() {
 
 function toggleFilter(type) {
   activeFilter.value = activeFilter.value === type ? '' : type
+  visibleCount.value = PAGE_SIZE
+  reattachObserver()
+}
+
+function toggleCorFilter(cor) {
+  corFiltroAtivo.value = corFiltroAtivo.value === cor ? '' : cor
   visibleCount.value = PAGE_SIZE
   reattachObserver()
 }
@@ -156,6 +175,33 @@ onUnmounted(() => {
         {{ labelForType(type) }}
         <span class="ml-1.5 text-xs opacity-60">({{ categoryCounts[type] }})</span>
       </button>
+    </div>
+
+    <!-- Color filter bar — dynamic from items in use -->
+    <div v-if="coresEmUso.length" class="flex overflow-x-auto gap-4 py-2 px-2 mb-2 scrollbar-none">
+      <button
+        class="h-10 px-5 rounded-full flex-shrink-0 flex items-center justify-center bg-white border border-gray-200 shadow-sm text-xs font-semibold text-neutral-600 transition-all duration-200 ease-out active:scale-95"
+        :class="
+          corFiltroAtivo === ''
+            ? 'ring-2 ring-accent ring-offset-2 ring-offset-app-bg scale-110'
+            : 'opacity-60'
+        "
+        @click="toggleCorFilter('')"
+      >
+        TOD
+      </button>
+      <button
+        v-for="cor in coresEmUso"
+        :key="cor"
+        class="w-10 h-10 rounded-full flex-shrink-0 border border-black/5 shadow-sm transition-all duration-200 ease-out active:scale-95"
+        :class="
+          corFiltroAtivo === cor
+            ? 'ring-2 ring-accent ring-offset-2 ring-offset-app-bg scale-110'
+            : ''
+        "
+        :style="{ backgroundColor: cor }"
+        @click="toggleCorFilter(cor)"
+      />
     </div>
 
     <!-- Drawer Front Container — initial loading skeleton -->

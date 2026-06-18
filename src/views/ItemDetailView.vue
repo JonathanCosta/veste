@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Cropper from 'cropperjs'
 import { useDialog } from '../composables/useDialog'
 import { useRelatedLookItems } from '../composables/useRelatedLookItems'
-import { labelForType } from '../utils/labels'
+import { labelForType, CORES_PADRAO } from '../utils/labels'
 import { getItem, deleteItem, addItem, updateItem, ITEM_TYPES } from '../services/wardrobeService'
 import { compressImage } from '../services/imageService'
 
@@ -31,6 +31,11 @@ const isCropping = ref(false)
 // Form fields
 const formType = ref('top')
 const formDescription = ref('')
+const formColor = ref('')
+
+const isCorCustom = computed(() => {
+  return formColor.value !== '' && !CORES_PADRAO.includes(formColor.value)
+})
 
 // Edit mode
 const isEditing = ref(false)
@@ -39,6 +44,7 @@ function enterEditMode() {
   if (!item.value) return
   formType.value = item.value.type || 'top'
   formDescription.value = item.value.description || ''
+  formColor.value = item.value.cor || ''
   isEditing.value = true
 }
 
@@ -53,6 +59,7 @@ function cancelEdit() {
   }
   formType.value = item.value?.type || 'top'
   formDescription.value = item.value?.description || ''
+  formColor.value = item.value?.cor || ''
 }
 
 // Crop state
@@ -73,6 +80,7 @@ async function loadItem(id) {
   imageFile.value = null
   formType.value = 'top'
   formDescription.value = ''
+  formColor.value = ''
 
   if (id === 'new') {
     loading.value = false
@@ -275,6 +283,7 @@ async function handleSave() {
     const data = {
       type: formType.value,
       description: formDescription.value.trim(),
+      ...(formColor.value && { cor: formColor.value }),
     }
     if (imageFile.value) {
       const blob =
@@ -400,6 +409,34 @@ async function handleDelete() {
           />
         </div>
 
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wider text-text-muted block mb-1.5"
+            >Cor predominante</label
+          >
+          <div class="flex overflow-x-auto gap-4 py-2 px-2 scrollbar-none">
+            <button
+              v-for="cor in CORES_PADRAO"
+              :key="cor"
+              class="w-10 h-10 rounded-full flex-shrink-0 border border-black/5 shadow-sm transition-all duration-200 ease-out active:scale-95"
+              :class="formColor === cor ? 'ring-2 ring-accent ring-offset-2 ring-offset-app-bg scale-110' : ''"
+              :style="{ backgroundColor: cor }"
+              @click="formColor = cor"
+            />
+            <button
+              class="w-10 h-10 rounded-full flex-shrink-0 relative overflow-hidden border border-black/5 shadow-sm transition-all duration-200 ease-out active:scale-95"
+              :class="isCorCustom ? 'ring-2 ring-accent ring-offset-2 ring-offset-app-bg scale-110' : ''"
+            >
+              <div class="absolute inset-0 bg-[conic-gradient(from_0deg,#ff4b4b,#ffeb3b,#4caf50,#2196f3,#9c27b0,#ff4b4b)]" />
+              <input
+                type="color"
+                :value="formColor"
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                @input="formColor = $event.target.value"
+              />
+            </button>
+          </div>
+        </div>
+
         <button
           class="w-full py-3 bg-accent text-white text-sm font-medium rounded-2xl active:scale-[0.97] transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="saving"
@@ -440,6 +477,11 @@ async function handleDelete() {
       <div class="px-4 pt-5">
         <h1 class="text-xl font-bold">{{ item.description || 'Sem descrição' }}</h1>
         <p class="text-sm text-text-muted capitalize mt-1">{{ labelForType(item.type) }}</p>
+
+        <div v-if="item.cor" class="flex items-center gap-2 mt-2">
+          <span class="w-5 h-5 rounded-full ring-1 ring-gray-200" :style="{ backgroundColor: item.cor }" />
+          <span class="text-xs text-text-muted">{{ item.cor }}</span>
+        </div>
 
         <div class="flex gap-3 mt-6">
           <button
@@ -594,6 +636,34 @@ async function handleDelete() {
             placeholder="Ex: Camiseta branca básica"
             class="w-full bg-white/70 rounded-2xl px-4 py-2.5 text-sm text-text-main placeholder:text-text-muted outline-none ring-1 ring-gray-200/50 focus:ring-accent/20 transition-shadow"
           />
+        </div>
+
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wider text-text-muted block mb-1.5"
+            >Cor predominante</label
+          >
+          <div class="flex overflow-x-auto gap-4 py-2 px-2 scrollbar-none">
+            <button
+              v-for="cor in CORES_PADRAO"
+              :key="cor"
+              class="w-10 h-10 rounded-full flex-shrink-0 border border-black/5 shadow-sm transition-all duration-200 ease-out active:scale-95"
+              :class="formColor === cor ? 'ring-2 ring-accent ring-offset-2 ring-offset-app-bg scale-110' : ''"
+              :style="{ backgroundColor: cor }"
+              @click="formColor = cor"
+            />
+            <button
+              class="w-10 h-10 rounded-full flex-shrink-0 relative overflow-hidden border border-black/5 shadow-sm transition-all duration-200 ease-out active:scale-95"
+              :class="isCorCustom ? 'ring-2 ring-accent ring-offset-2 ring-offset-app-bg scale-110' : ''"
+            >
+              <div class="absolute inset-0 bg-[conic-gradient(from_0deg,#ff4b4b,#ffeb3b,#4caf50,#2196f3,#9c27b0,#ff4b4b)]" />
+              <input
+                type="color"
+                :value="formColor"
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                @input="formColor = $event.target.value"
+              />
+            </button>
+          </div>
         </div>
 
         <div class="flex gap-3">
