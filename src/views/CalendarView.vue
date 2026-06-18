@@ -192,6 +192,22 @@ onMounted(loadMonth)
     </div>
 
     <!-- Day detail sheet -->
-    <DayDetailSheet v-if="selectedDate" :date="selectedDate" @close="closeSheet" />
+    <Transition name="sheet">
+      <DayDetailSheet v-if="selectedDate" :date="selectedDate" @close="closeSheet" />
+    </Transition>
   </div>
 </template>
+
+<style>
+.sheet-enter-active,
+.sheet-leave-active {
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+.sheet-enter-from,
+.sheet-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+</style>
