@@ -30,6 +30,15 @@ const filteredItems = computed(() => {
   return list
 })
 
+const categoryCounts = computed(() => {
+  const list = items.value
+  const counts = { todas: list.length, top: 0, bottom: 0, full: 0, shoes: 0, accessory: 0 }
+  for (const item of list) {
+    if (counts[item.type] !== undefined) counts[item.type]++
+  }
+  return counts
+})
+
 const paginatedItems = computed(() => {
   return filteredItems.value.slice(0, visibleCount.value)
 })
@@ -131,6 +140,7 @@ onUnmounted(() => {
         @click="resetFilter()"
       >
         Todas
+        <span class="ml-1.5 text-xs opacity-60">({{ categoryCounts.todas }})</span>
       </button>
       <button
         v-for="type in ITEM_TYPES"
@@ -144,6 +154,7 @@ onUnmounted(() => {
         @click="toggleFilter(type)"
       >
         {{ labelForType(type) }}
+        <span class="ml-1.5 text-xs opacity-60">({{ categoryCounts[type] }})</span>
       </button>
     </div>
 
