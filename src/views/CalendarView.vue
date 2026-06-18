@@ -109,7 +109,7 @@ onMounted(loadMonth)
 </script>
 
 <template>
-  <div class="min-h-screen px-4 pt-6 pb-24">
+  <div class="min-h-screen px-4 pt-6 pb-4">
     <!-- Header -->
     <header class="flex items-center justify-between mb-6">
       <button
@@ -151,13 +151,7 @@ onMounted(loadMonth)
       <div v-for="n in 35" :key="n" class="aspect-square rounded-xl bg-gray-200/50 animate-pulse" />
     </div>
 
-    <!-- Empty state: no logs this month -->
-    <div v-else-if="!hasLogs" class="flex flex-col items-center justify-center py-12 col-span-7">
-      <p class="text-text-muted/50 text-xs">Nenhum look registrado</p>
-      <p class="text-text-muted/30 text-[10px] mt-1">Toque em um dia para adicionar</p>
-    </div>
-
-    <!-- Calendar grid -->
+    <!-- Calendar grid (always rendered, even when empty — days are always clickable) -->
     <div v-else class="grid grid-cols-7 gap-1">
       <div
         v-for="(cell, idx) in days"
@@ -186,6 +180,15 @@ onMounted(loadMonth)
           </div>
         </template>
       </div>
+    </div>
+
+    <!-- Empty state (overlaid below grid when no logs this month) -->
+    <div
+      v-if="!loading && !hasLogs"
+      class="flex flex-col items-center justify-center py-10 text-center"
+    >
+      <p class="text-text-muted/50 text-xs">Nenhum look registrado neste mês</p>
+      <p class="text-text-muted/30 text-[10px] mt-1">Toque em um dia para começar</p>
     </div>
 
     <!-- Day detail sheet -->

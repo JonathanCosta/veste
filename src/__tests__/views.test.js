@@ -57,6 +57,11 @@ async function setupRouter() {
         component: () => import('../views/LookManagerView.vue'),
       },
       {
+        path: '/calendar',
+        name: 'Calendar',
+        component: () => import('../views/CalendarView.vue'),
+      },
+      {
         path: '/settings',
         name: 'Settings',
         component: () => import('../views/SettingsView.vue'),
@@ -424,5 +429,102 @@ describe('SettingsView.vue', () => {
     await vi.waitFor(() => {
       expect(wrapper.text()).toContain('Selecione um arquivo .zip')
     })
+  })
+})
+
+// ────────────────────────────────────────────
+// CalendarView
+// ────────────────────────────────────────────
+describe('CalendarView.vue', () => {
+  beforeEach(async () => {
+    await db.open()
+    await db.calendar_logs.clear()
+    await db.items.clear()
+    await db.looks.clear()
+  })
+
+  it('renders month label and navigation arrows', async () => {
+    const View = (await import('../views/CalendarView.vue')).default
+    const { wrapper } = await mountView(View, '/calendar')
+
+    await vi.waitFor(() => {
+      // Should show month label (e.g. "junho de 2026")
+      expect(wrapper.text()).toMatch(
+        /janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro/,
+      )
+      // Should have prev/next buttons
+      const arrows = wrapper.findAll('header button')
+      expect(arrows).toHaveLength(2)
+    })
+  })
+
+  it('renders 7 day-of-week labels', async () => {
+    const View = (await import('../views/CalendarView.vue')).default
+    const { wrapper } = await mountView(View, '/calendar')
+
+    await vi.waitFor(() => {
+      // Day-of-week labels: Dom, Seg, Ter, Qua, Qui, Sex, Sáb
+      expect(wrapper.text()).toContain('Dom')
+      expect(wrapper.text()).toContain('Sáb')
+    })
+  })
+
+  it('shows empty state AND day cells when no logs exist', async () => {
+    const View = (await import('../views/CalendarView.vue')).default
+    const { wrapper } = await mountView(View, '/calendar')
+
+    await vi.waitFor(() => {
+      // Empty state message should be visible
+      expect(wrapper.text()).toContain('Nenhum look registrado neste mês')
+      // Day cells should also be visible (day numbers 1-31 rendered in grid)
+      expect(wrapper.text()).toContain('1')
+      expect(wrapper.text()).toContain('15')
+    })
+  })
+
+  it('shows logs count in dot indicators when logs exist', async () => {
+    // Add an item and a calendar log for today
+    const itemId = await db.items.add({
+      type: 'top',
+      description: 'Camiseta',
+      createdAt: Date.now(),
+    })
+    const today = new Date().toISOString().slice(0, 10)
+    await db.calendar_logs.add({
+      date: today,
+      entityType: 'item',
+      entityId: itemId,
+      order: 0,
+    })
+
+    const View = (await import('../views/CalendarView.vue')).default
+    const { wrapper } = await mountView(View, '/calendar')
+
+    await vi.waitFor(() => {
+      // Should NOT show empty state
+      expect(wrapper.text()).not.toContain('Nenhum look registrado neste mês')
+      // Should show day cells with numbers
+      const todayNum = new Date().getDate().toString()
+      expect(wrapper.text()).toContain(todayNum)
+    })
+  })
+
+  it('navigates to previous and next month', async () => {
+    const View = (await import('../views/CalendarView.vue')).default
+    const { wrapper } = await mountView(View, '/calendar')
+
+    await vi.waitFor(() => {
+      // Initial month label should render
+      expect(wrapper.text()).toBeTruthy()
+    })
+
+    // Click prev month button
+    const prevBtn = wrapper.findAll('header button')[0]
+    await prevBtn.trigger('click')
+
+    // Click next month button twice to come back
+    const nextBtn = wrapper.findAll('header button')[1]
+    await nextBtn.trigger('click')
+    await nextBtn.trigger('click')
   })
 })

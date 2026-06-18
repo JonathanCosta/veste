@@ -18,6 +18,11 @@ describe('App.vue', () => {
         },
         { path: '/looks', name: 'Looks', component: { template: '<div>Looks Page</div>' } },
         {
+          path: '/calendar',
+          name: 'Calendar',
+          component: { template: '<div>Calendar Page</div>' },
+        },
+        {
           path: '/settings',
           name: 'Settings',
           component: { template: '<div>Settings Page</div>' },
@@ -58,6 +63,23 @@ describe('App.vue', () => {
 
     await vi.waitFor(() => {
       expect(wrapper.text()).toContain('Settings Page')
+    })
+  })
+
+  it('navigates to /calendar via bottom nav', async () => {
+    await router.push('/')
+    const wrapper = mount(App, {
+      global: { plugins: [router] },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Wardrobe Page')
+    })
+
+    await router.push('/calendar')
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Calendar Page')
     })
   })
 

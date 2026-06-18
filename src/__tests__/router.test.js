@@ -24,6 +24,11 @@ describe('Router configuration', () => {
           component: () => import('../views/LookManagerView.vue'),
         },
         {
+          path: '/calendar',
+          name: 'Calendar',
+          component: () => import('../views/CalendarView.vue'),
+        },
+        {
           path: '/settings',
           name: 'Settings',
           component: () => import('../views/SettingsView.vue'),
@@ -37,9 +42,9 @@ describe('Router configuration', () => {
     expect(router.options.history.base).toBe('/veste')
   })
 
-  it('has 4 routes defined', () => {
+  it('has 5 routes defined', () => {
     const routes = router.getRoutes()
-    expect(routes).toHaveLength(4)
+    expect(routes).toHaveLength(5)
   })
 
   it('defines all expected route paths', () => {
@@ -47,6 +52,7 @@ describe('Router configuration', () => {
     expect(paths).toContain('/')
     expect(paths).toContain('/item/:id')
     expect(paths).toContain('/looks')
+    expect(paths).toContain('/calendar')
     expect(paths).toContain('/settings')
   })
 
@@ -73,5 +79,21 @@ describe('Router configuration', () => {
     const resolved = router.resolve('/item/123')
     expect(resolved.name).toBe('ItemDetail')
     expect(resolved.params.id).toBe('123')
+  })
+
+  it('resolves /calendar to Calendar route', () => {
+    const resolved = router.resolve('/calendar')
+    expect(resolved.name).toBe('Calendar')
+  })
+
+  it('loads CalendarView component via lazy import', async () => {
+    const routeMap = {}
+    for (const record of router.getRoutes()) {
+      routeMap[record.path] = record.components?.default
+    }
+    const componentImport = routeMap['/calendar']
+    expect(componentImport).toBeTypeOf('function')
+    const mod = await componentImport()
+    expect(mod.default).toBeTypeOf('object')
   })
 })

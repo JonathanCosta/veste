@@ -14,6 +14,7 @@ function createMockRouter() {
       { path: '/', name: 'Wardrobe', component: { template: '<div />' } },
       { path: '/item/:id', name: 'ItemDetail', component: { template: '<div />' } },
       { path: '/looks', name: 'Looks', component: { template: '<div />' } },
+      { path: '/calendar', name: 'Calendar', component: { template: '<div />' } },
       { path: '/settings', name: 'Settings', component: { template: '<div />' } },
     ],
   })
@@ -73,7 +74,7 @@ describe('ItemCard.vue', () => {
 })
 
 describe('BottomNav.vue', () => {
-  it('renders 4 tabs', () => {
+  it('renders 5 tabs (Peças, Looks, FAB, Calendário, Config)', () => {
     const router = createMockRouter()
     const wrapper = mount(BottomNav, {
       global: { plugins: [router] },
