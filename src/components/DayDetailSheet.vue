@@ -6,6 +6,8 @@ import { labelForType } from '../utils/labels'
 import { useDialog } from '../composables/useDialog'
 import db from '../database/db'
 
+const URL = window.URL
+
 const props = defineProps({
   date: { type: String, required: true },
 })
