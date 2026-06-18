@@ -20,3 +20,22 @@ export const TYPE_LABEL = {
 export function labelForType(type) {
   return TYPE_LABEL[type] || 'Desconhecido'
 }
+
+/**
+ * Default color palette for clothing items.
+ * Each value is a hex color string used for swatches and filtering.
+ */
+export const CORES_PADRAO = [
+  '#171717',
+  '#FFFFFF',
+  '#9CA3AF',
+  '#FEF3C7',
+  '#1E3A8A',
+  '#3B82F6',
+  '#EF4444',
+  '#10B981',
+  '#FACC15',
+  '#F9A8D4',
+  '#9333EA',
+  '#92400E',
+]

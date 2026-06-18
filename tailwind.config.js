@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        'app-bg': '#F5F4F0',
+        'app-bg': '#F7F7F6',
         accent: '#2D2D2D',
         'text-main': '#1F2937',
         'text-muted': '#6B7280',

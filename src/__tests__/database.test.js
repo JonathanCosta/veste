@@ -6,9 +6,9 @@ describe('VesteDB schema', () => {
     await db.open()
   })
 
-  it('has version 2', () => {
+  it('has version 3', () => {
     const v = db.verno ?? db._verno ?? 1
-    expect(v).toBe(2)
+    expect(v).toBe(3)
   })
 
   it('has items store with correct indexes', () => {
@@ -50,6 +50,18 @@ describe('VesteDB schema', () => {
     expect(item).toBeDefined()
     expect(item.type).toBe('top')
     expect(item.description).toBe('Camiseta azul')
+  })
+
+  it('stores and retrieves an item with cor', async () => {
+    const id = await db.items.add({
+      type: 'bottom',
+      description: 'Calça jeans',
+      cor: '#1E3A8A',
+      createdAt: Date.now(),
+    })
+    const item = await db.items.get(id)
+    expect(item).toBeDefined()
+    expect(item.cor).toBe('#1E3A8A')
   })
 
   it('stores and retrieves a category', async () => {
