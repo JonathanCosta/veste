@@ -150,9 +150,23 @@ const progressPercent = computed(() => {
 
 <template>
   <div class="px-4 pt-6 pb-4">
-    <header class="mb-6">
-      <h1 class="text-2xl font-bold tracking-tight">Configurações</h1>
-    </header>
+    <div class="flex items-center justify-between mb-6">
+      <button
+        class="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform duration-200"
+        @click="router.back()"
+      >
+        <svg class="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+      </button>
+      <h1 class="text-lg font-bold">Configurações</h1>
+      <div class="w-9" />
+    </div>
 
     <section class="space-y-4">
       <!-- ─── Data card ──────────────────────────────────────── -->
