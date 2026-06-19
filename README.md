@@ -340,7 +340,7 @@ O código de aplicação não utiliza `fetch` ou `XMLHttpRequest` — **não há
 O workflow `.github/workflows/deploy.yml` automatiza o deploy:
 
 ```yaml
-# Gatilho: push na branch master (ignorando docs/ e *.md)
+# Gatilho: push na branch main (ignorando docs/ e *.md)
 # 1. actions/checkout@v4
 # 2. actions/setup-node@v4 (Node 22, cache npm)
 # 3. npm ci (instalação determinística)
@@ -360,7 +360,7 @@ GitHub Pages processa sites com Jekyll por padrão. Jekyll ignora arquivos e pas
 1. Crie um repositório no GitHub chamado **`veste`** (o base path `/veste/` no Vite assume este nome)
 2. Conecte o repositório local: `git remote add origin git@github.com:JonathanCosta/veste.git`
 3. No repositório → **Settings → Pages → Source → "GitHub Actions"**
-4. Faça push para `master` — o deploy acontece automaticamente
+4. Faça push para `main` — o deploy acontece automaticamente
 
 > Se o repositório tiver outro nome, atualize `base` em `vite.config.js` e `start_url` no manifest do PWA.
 

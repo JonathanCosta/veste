@@ -2,7 +2,7 @@ name: Deploy PWA Veste
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
     paths-ignore:
       - '*.md'
       - 'docs/**'
