@@ -1,6 +1,24 @@
 # Veste — Look do Dia
 
-![Logo](src/components/LogoIcon.vue)
+<p align="center">
+  <img src="https://img.shields.io/github/actions/workflow/status/JonathanCosta/veste/deploy.yml?style=for-the-badge&logo=githubactions&logoColor=white" alt="Build" />
+  <img src="https://img.shields.io/github/license/JonathanCosta/veste?style=for-the-badge" alt="License" />
+  <img src="https://img.shields.io/badge/PWA-Ready-8E24AA?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA" />
+  <img src="https://img.shields.io/badge/Offline-First-1565C0?style=for-the-badge&logo=network-wired&logoColor=white" alt="Offline" />
+  <img src="https://img.shields.io/badge/Tests-123%20passed-brightgreen?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Vue_3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue" />
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
+  <img src="https://img.shields.io/badge/Dexie.js-007ACC?style=for-the-badge&logo=indexeddb&logoColor=white" alt="Dexie" />
+  <img src="https://img.shields.io/badge/Offline_First-1565C0?style=for-the-badge&logo=network-wired&logoColor=white" alt="Offline First" />
+</p>
+
+<p align="center">
+  <img src="docs/logo_icone.svg" width="80" height="72" alt="Veste Logo" />
+</p>
 
 **Guarda-roupa virtual offline-first.**  
 PWA 100% local, sem servidores. Instalável na tela inicial, funciona offline, atualiza automaticamente.
