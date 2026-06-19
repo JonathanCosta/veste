@@ -32,6 +32,7 @@ export default defineConfig({
             src: 'icons/android/launchericon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'any maskable',
           },
           {
             src: 'icons/android/launchericon-512x512.png',
