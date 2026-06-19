@@ -379,14 +379,10 @@ function getLookItemUrl(itemId) {
 <template>
   <div class="px-4 pb-4">
     <!-- Brand icon mark -->
-    <div class="flex justify-center pt-3 pb-2">
-      <LogoIcon class="mx-auto" />
+    <div class="flex justify-center pt-4 pb-1">
+      <LogoIcon size="w-20 h-20" class="mx-auto" />
     </div>
-
-    <header class="mt-2 mb-5">
-      <h1 class="text-2xl font-bold tracking-tight">Looks</h1>
-      <p class="text-sm text-text-muted mt-0.5">{{ filteredLooks.length }} looks</p>
-    </header>
+    <p class="text-center text-xs text-text-muted pb-3">{{ filteredLooks.length }} looks</p>
 
     <button
       class="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-sm text-text-muted active:scale-[0.97] transition-transform duration-200 mb-5"

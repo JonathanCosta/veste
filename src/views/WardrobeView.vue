@@ -130,14 +130,10 @@ onUnmounted(() => {
 <template>
   <div class="px-4 pb-4">
     <!-- Brand icon mark -->
-    <div class="flex justify-center pt-3 pb-2">
-      <LogoIcon class="mx-auto" />
+    <div class="flex justify-center pt-4 pb-1">
+      <LogoIcon size="w-20 h-20" class="mx-auto" />
     </div>
-
-    <header class="mt-2 mb-5">
-      <h1 class="text-2xl font-bold tracking-tight">guarda roupa</h1>
-      <p class="text-sm text-text-muted mt-0.5">{{ filteredItems.length }} peças</p>
-    </header>
+    <p class="text-center text-xs text-text-muted pb-3">{{ filteredItems.length }} peças</p>
 
     <div class="relative mb-4">
       <input
