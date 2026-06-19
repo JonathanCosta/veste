@@ -11,7 +11,7 @@
     "test:e2e": "playwright test --config=e2e/playwright.config.js",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{vue,js,css}\"",
-    "deploy": "npm run build && touch dist/.nojekyll && gh-pages -d dist"
+    "deploy": "echo 'Deploy automatizado via GitHub Actions. Use git push para main ou workflow_dispatch no GitHub.'"
   },
   "lint-staged": {
     "*.{vue,js}": "eslint --fix",
@@ -34,7 +34,6 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.9.2",
     "fake-indexeddb": "^6.2.5",
-    "gh-pages": "^6.3.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.7",

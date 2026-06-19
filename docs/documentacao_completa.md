@@ -726,4 +726,4 @@ compressImage(File)
 | `npm run test:e2e` | Testes end-to-end (Playwright) |
 | `npm run lint` | ESLint (verificação de código) |
 | `npm run format` | Prettier (formatação de código) |
-| `npm run deploy` | Build + GitHub Pages (gh-pages) |
+| `npm run deploy` | Deploy via GitHub Actions (push na main) |

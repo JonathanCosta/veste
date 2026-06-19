@@ -337,23 +337,24 @@ O código de aplicação não utiliza `fetch` ou `XMLHttpRequest` — **não há
 
 ### CI/CD — GitHub Actions
 
-O workflow `.github/workflows/deploy.yml` automatiza o deploy:
+O workflow `.github/workflows/deploy.yml` automatiza o deploy usando o pipeline oficial do GitHub Pages:
 
 ```yaml
-# Gatilho: push na branch main (ignorando docs/ e *.md)
+# Gatilho: push na branch main (ou workflow_dispatch manual)
 # 1. actions/checkout@v4
 # 2. actions/setup-node@v4 (Node 22, cache npm)
 # 3. npm ci (instalação determinística)
 # 4. npm run build (vite build → dist/)
-# 5. touch dist/.nojekyll
-# 6. peaceiris/actions-gh-pages@v3 (publica dist/ no gh-pages)
+# 5. actions/configure-pages@v4 (configura Pages + .nojekyll automático)
+# 6. actions/upload-pages-artifact@v3 (submete dist/ como artifact)
+# 7. actions/deploy-pages@v4 (deploy via API GitHub Pages)
 ```
 
 [![Deploy PWA Veste](https://github.com/JonathanCosta/veste/actions/workflows/deploy.yml/badge.svg)](https://github.com/JonathanCosta/veste/actions/workflows/deploy.yml)
 
-### Por que `.nojekyll`?
+### `.nojekyll` (gerenciado automaticamente)
 
-GitHub Pages processa sites com Jekyll por padrão. Jekyll ignora arquivos e pastas que começam com `_` (ex.: `_assets/` ou `workbox-*.js` gerados pelo PWA). O comando `touch dist/.nojekyll` desativa o Jekyll e garante que **todos** os assets sejam servidos corretamente.
+O `actions/configure-pages@v4` cria automaticamente o arquivo `.nojekyll` na raiz do artifact durante o deploy via API (que não executa Jekyll). Isso garante que arquivos como `workbox-*.js` gerados pelo PWA sejam servidos corretamente — sem necessidade de `touch dist/.nojekyll` manual.
 
 ### Pré-requisitos
 
@@ -364,19 +365,19 @@ GitHub Pages processa sites com Jekyll por padrão. Jekyll ignora arquivos e pas
 
 > Se o repositório tiver outro nome, atualize `base` em `vite.config.js` e `start_url` no manifest do PWA.
 
-### Deploy Manual (Fallback)
+### Deploy Manual (via GitHub Actions)
 
-```bash
-npm run deploy   # gh-pages -d dist (branch gh-pages)
-```
+Para disparar o deploy manualmente sem fazer push:
+1. Acesse **GitHub → Actions → Deploy PWA Veste → Run workflow**
+2. Selecione `main` e clique **Run workflow**
 
-> ⚠️ O script manual empurra para a branch `gh-pages`. Se estiver usando CI (recomendado), mantenha Settings → Pages apontando para **GitHub Actions**. Não use ambos simultaneamente — podem sobrescrever o deploy um do outro.
+O `workflow_dispatch` está habilitado no workflow para esta finalidade.
 
 ### Domínio Personalizado
 
 Para usar um domínio próprio (ex.: `veste.app`):
-1. Configure o domínio em Settings → Pages
-2. Use o input `cname` da action `peaceiris/actions-gh-pages`
+1. Configure o domínio em **Settings → Pages → Domínio personalizado**
+2. Adicione um arquivo `CNAME` em `public/CNAME` com o domínio
 3. Atualize `base` em `vite.config.js` para `'/'` e `start_url` para `'/'`
 
 ---
@@ -391,7 +392,7 @@ Para usar um domínio próprio (ex.: `veste.app`):
 | `npm run test` | Testes unitários (Vitest, 123+ testes) |
 | `npm run lint` | ESLint — verificação de código |
 | `npm run format` | Prettier — formatação automática |
-| `npm run deploy` | Deploy manual via gh-pages CLI |
+| `npm run deploy` | Deploy via GitHub Actions CI (push na main) |
 
 ---
 

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "veste-engineer",
+  "instructions": [
+    "AGENTS.md"
+  ],
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+  "command": {
+    "dev": {
+      "description": "Iniciar servidor de desenvolvimento Vite",
+      "template": "npm run dev"
+    },
+    "build": {
+      "description": "Build de produção",
+      "template": "npm run build"
+    },
+    "test": {
+      "description": "Rodar testes unitários Vitest",
+      "template": "npm run test"
+    },
+    "lint": {
+      "description": "Verificar lint com ESLint",
+      "template": "npm run lint"
+    },
+    "format": {
+      "description": "Formatar código com Prettier",
+      "template": "npm run format"
+    },
+    "deploy": {
+      "description": "Fazer deploy para GitHub Pages via CI",
+      "template": "npm run deploy"
+    }
+  },
+  "mcp": {
+    "filesystem-veste": {
+      "type": "local",
+      "command": [
+        "npx", "-y", "@modelcontextprotocol/server-filesystem",
+        "/home/jonathan/Projetos/Diversos/veste_app"
+      ],
+      "enabled": true
+    }
+  },
+  "permission": {
+    "bash": {
+      "git *": "allow",
+      "npm run *": "allow",
+      "npm install *": "ask",
+      "npx *": "ask",
+      "rm *": "deny",
+      "mv *": "ask",
+      "cp *": "ask",
+      "mkdir *": "allow",
+      "touch *": "allow",
+      "*": "ask"
+    },
+    "edit": "allow",
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "external_directory": {
+      "/home/jonathan/Projetos/Diversos/veste_app/**": "allow",
+      "*": "deny"
+    }
+  }
+}
