@@ -224,11 +224,19 @@ const progressPercent = computed(() => {
           class="h-20 mx-auto object-contain mb-4 filter drop-shadow-sm"
         />
         <h2 class="text-sm font-medium uppercase tracking-wider text-text-muted mb-2">Sobre</h2>
-        <p class="text-xs text-text-muted leading-relaxed">
+        <p class="text-xs text-text-muted leading-relaxed mb-3">
           Veste — Look do Dia v0.1.0<br />
           Guarda-roupa virtual offline-first.<br />
           100% local, sem servidores.
         </p>
+        <a
+          href="https://github.com/JonathanCosta"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-xs text-accent underline underline-offset-2 inline-block active:scale-95 transition-transform"
+        >
+          @JonathanCosta
+        </a>
       </div>
 
       <!-- ─── Developer card (dev only) ──────────────────────── -->
