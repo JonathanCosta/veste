@@ -94,7 +94,7 @@ describe('WardrobeView.vue', () => {
   it('renders header and search input', async () => {
     const View = (await import('../views/WardrobeView.vue')).default
     const { wrapper } = await mountView(View)
-    expect(wrapper.text()).toContain('guarda roupa')
+    expect(wrapper.text()).toContain('0 peças')
     expect(wrapper.find('input[type="search"]').exists()).toBe(true)
   })
 
@@ -268,7 +268,7 @@ describe('LookManagerView.vue', () => {
   it('renders header and create button', async () => {
     const View = (await import('../views/LookManagerView.vue')).default
     const { wrapper } = await mountView(View)
-    expect(wrapper.text()).toContain('Looks')
+    expect(wrapper.text()).toContain('0 looks')
     expect(wrapper.text()).toContain('Criar look')
   })
 
