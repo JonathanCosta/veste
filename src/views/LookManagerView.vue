@@ -12,6 +12,7 @@ import {
 } from '../services/wardrobeService'
 import { compressImage } from '../services/imageService'
 import { useDialog } from '../composables/useDialog'
+import LogoIcon from '../components/LogoIcon.vue'
 
 const router = useRouter()
 const dialog = useDialog()
@@ -377,9 +378,9 @@ function getLookItemUrl(itemId) {
 
 <template>
   <div class="px-4 pb-4">
-    <!-- Centered logo mark -->
-    <div class="flex justify-center pt-4 pb-3">
-      <img src="/logo.png" alt="Veste Logo" class="h-8 w-8 object-contain" />
+    <!-- Brand icon mark -->
+    <div class="flex justify-center pt-3 pb-2">
+      <LogoIcon class="mx-auto" />
     </div>
 
     <header class="mt-2 mb-5">

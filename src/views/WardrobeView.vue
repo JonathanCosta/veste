@@ -5,6 +5,7 @@ import ItemCard from '../components/ItemCard.vue'
 import { useItems } from '../composables/useItems'
 import { labelForType } from '../utils/labels'
 import { ITEM_TYPES } from '../services/wardrobeService'
+import LogoIcon from '../components/LogoIcon.vue'
 
 const router = useRouter()
 const { items, loading, loadItems } = useItems()
@@ -128,9 +129,9 @@ onUnmounted(() => {
 
 <template>
   <div class="px-4 pb-4">
-    <!-- Centered logo mark -->
-    <div class="flex justify-center pt-4 pb-3">
-      <img src="/logo.png" alt="Veste Logo" class="h-8 w-8 object-contain" />
+    <!-- Brand icon mark -->
+    <div class="flex justify-center pt-3 pb-2">
+      <LogoIcon class="mx-auto" />
     </div>
 
     <header class="mt-2 mb-5">
@@ -180,7 +181,7 @@ onUnmounted(() => {
     <!-- Color filter bar — dynamic from items in use -->
     <div v-if="coresEmUso.length" class="flex overflow-x-auto gap-4 py-2 px-2 mb-2 scrollbar-none">
       <button
-        class="h-10 px-5 rounded-full flex-shrink-0 flex items-center justify-center bg-white border border-gray-200 shadow-sm text-xs font-semibold text-neutral-600 transition-all duration-200 ease-out active:scale-95"
+        class="h-10 px-4 rounded-full flex-shrink-0 flex items-center justify-center bg-white border border-gray-200 shadow-sm text-xs font-semibold text-text-muted transition-all duration-200 ease-out active:scale-95"
         :class="
           corFiltroAtivo === ''
             ? 'ring-2 ring-accent ring-offset-2 ring-offset-app-bg scale-110'
@@ -188,7 +189,7 @@ onUnmounted(() => {
         "
         @click="toggleCorFilter('')"
       >
-        TOD
+        CORES
       </button>
       <button
         v-for="cor in coresEmUso"
